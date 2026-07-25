@@ -465,3 +465,157 @@ export interface BookLoan {
   notes?: string;
   created_at?: string;
 }
+
+// Module Examens & Distinctions
+export type ExamStatus = 'draft' | 'in_progress' | 'completed' | 'published';
+export type ExamType = 'BEPC_BLANC' | 'BAC_BLANC' | 'DEVOIR_NATIONALE' | 'COMPOSITION_BLANCHE' | 'AUTRE';
+export type AwardType = 'BEST_STUDENT' | 'BEST_PROGRESSION' | 'BEST_IN_SUBJECT' | 'HONOR_ROLL' | 'EXCELLENCE';
+
+export interface Exam {
+  id: string;
+  school_id: string;
+  academic_year_id: string;
+  academic_term_id?: string;
+  name: string;
+  exam_type: ExamType | string;
+  level_id: string; // e.g. '3ème', 'Terminale'
+  class_id?: string;
+  series_id?: string; // 'A', 'C', 'D', 'G', etc.
+  start_date?: string;
+  end_date?: string;
+  status: ExamStatus;
+  created_by?: string;
+  created_at?: string;
+  subjects_count?: number;
+  candidates_count?: number;
+}
+
+export interface ExamSubject {
+  id: string;
+  school_id: string;
+  exam_id: string;
+  subject_id: string;
+  subject_name?: string;
+  coefficient: number;
+  max_score: number;
+  is_optional: boolean;
+}
+
+export interface ExamCandidate {
+  id: string;
+  school_id: string;
+  exam_id: string;
+  student_id: string;
+  candidate_number?: string;
+  class_id: string;
+  student_name?: string;
+  class_name?: string;
+  registration_number?: string;
+  created_at?: string;
+}
+
+export interface ExamGrade {
+  id: string;
+  school_id: string;
+  exam_id: string;
+  student_id: string;
+  subject_id: string;
+  score?: number | null;
+  is_absent?: boolean;
+  entered_by?: string;
+  updated_at?: string;
+}
+
+export interface ExamResult {
+  id: string;
+  school_id: string;
+  exam_id: string;
+  student_id: string;
+  student_name?: string;
+  registration_number?: string;
+  class_name?: string;
+  level_name?: string;
+  total_points: number;
+  total_coefficients: number;
+  average: number;
+  rank: number;
+  rank_level: number;
+  mention: string; // 'Très Bien', 'Bien', 'Assez Bien', 'Passable', 'Ajourné'
+  result_status: 'ADMIS' | 'REFUSÉ' | 'ABSENT';
+  created_at?: string;
+}
+
+export interface HonorRollConfig {
+  id: string;
+  school_id: string;
+  title: string;
+  min_average: number;
+  max_average?: number;
+  created_at?: string;
+}
+
+export interface HonorRoll {
+  id: string;
+  school_id: string;
+  academic_year_id: string;
+  academic_term_id?: string;
+  period_type: 'monthly' | 'term' | 'annual';
+  title: string;
+  created_at?: string;
+  entries_count?: number;
+}
+
+export interface HonorRollEntry {
+  id: string;
+  honor_roll_id: string;
+  student_id: string;
+  student_name?: string;
+  registration_number?: string;
+  class_id: string;
+  class_name?: string;
+  average: number;
+  distinction_level: string;
+  rank?: number;
+}
+
+export interface Award {
+  id: string;
+  school_id: string;
+  student_id: string;
+  student_name?: string;
+  registration_number?: string;
+  class_name?: string;
+  award_type: AwardType | string;
+  subject_id?: string;
+  subject_name?: string;
+  title: string;
+  description?: string;
+  academic_year_id: string;
+  academic_term_id?: string;
+  average?: number;
+  progression_delta?: number;
+  rank?: number;
+  awarded_at?: string;
+}
+
+export interface Certificate {
+  id: string;
+  school_id: string;
+  student_id: string;
+  student_name?: string;
+  registration_number?: string;
+  class_name?: string;
+  exam_id?: string;
+  exam_name?: string;
+  certificate_number: string;
+  certificate_type: 'EXAM_SUCCESS' | 'EXCELLENCE' | 'HONOR' | 'PROGRESSION' | string;
+  title: string;
+  average?: number;
+  rank?: number;
+  mention?: string;
+  pdf_url?: string;
+  verification_code: string;
+  issued_at?: string;
+  issued_by?: string;
+}
+

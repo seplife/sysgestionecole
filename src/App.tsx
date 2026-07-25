@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { TenantProvider } from './context/TenantContext';
 import { SubscriptionProvider } from './context/SubscriptionContext';
@@ -17,6 +17,8 @@ import { AttendanceModule } from './modules/attendance/AttendanceModule';
 import { TimetableModule } from './modules/timetable/TimetableModule';
 import { GradesModule } from './modules/grades/GradesModule';
 import { ReportCardModule } from './modules/reports/ReportCardModule';
+import { ExamsModule } from './modules/exams/ExamsModule';
+import { PublicVerificationPage } from './modules/exams/components/PublicVerificationPage';
 import { FinanceModule } from './modules/finance/FinanceModule';
 import { CommunicationModule } from './modules/communication/CommunicationModule';
 import { AIAssistantModule } from './modules/ai/AIAssistantModule';
@@ -28,6 +30,20 @@ export const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [currentModule, setCurrentModule] = useState<string>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+
+  // Check if URL is public verification page /verify/[code]
+  const pathname = window.location.pathname;
+  let verifyCode: string | null = null;
+  if (pathname.startsWith('/verify/')) {
+    verifyCode = pathname.replace('/verify/', '');
+  } else {
+    const urlParams = new URLSearchParams(window.location.search);
+    verifyCode = urlParams.get('verify') || urlParams.get('code');
+  }
+
+  if (verifyCode) {
+    return <PublicVerificationPage code={verifyCode} onBack={() => { window.location.href = '/'; }} />;
+  }
 
   if (!isAuthenticated) {
     return <LoginModule />;
@@ -53,6 +69,8 @@ export const AppContent: React.FC = () => {
         return <GradesModule />;
       case 'reports':
         return <ReportCardModule />;
+      case 'exams':
+        return <ExamsModule />;
       case 'finance':
         return <FinanceModule />;
       case 'communication':
@@ -118,3 +136,4 @@ export default function App() {
     </AuthProvider>
   );
 }
+

@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, UserCheck, GraduationCap, BookOpen, 
   CalendarCheck, Clock, CreditCard, MessageSquare, Library, 
   Bus, Utensils, Sparkles, Building2, ShieldCheck, FileSpreadsheet, 
-  Award, LogOut, X
+  Award, LogOut, X, Trophy
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
@@ -43,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'timetable', label: 'Emploi du temps', icon: Clock },
     { id: 'grades', label: 'Notes & Évaluations', icon: FileSpreadsheet },
     { id: 'reports', label: 'Bulletins Scolaires', icon: Award, badge: 'PDF' },
+    { id: 'exams', label: 'Examens & Distinctions', icon: Trophy, badge: 'BAC/BEPC' },
     { id: 'finance', label: 'Finances & Mobile Money', icon: CreditCard },
     { id: 'communication', label: 'WhatsApp & SMS', icon: MessageSquare, badge: 'Chatbot' },
     { id: 'library', label: 'Bibliothèque', icon: Library },
