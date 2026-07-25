@@ -27,6 +27,7 @@ import { LibraryModule, TransportModule, CafeteriaModule } from './modules/extra
 export const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [currentModule, setCurrentModule] = useState<string>('dashboard');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   if (!isAuthenticated) {
     return <LoginModule />;
@@ -75,11 +76,16 @@ export const AppContent: React.FC = () => {
 
   return (
     <ProtectedRoute>
-      <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans text-slate-900 dark:text-slate-100">
-        {/* Sidebar Navigation */}
+      <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans text-slate-900 dark:text-slate-100 relative">
+        {/* Sidebar Navigation (Desktop Static & Mobile Drawer) */}
         <Sidebar 
           currentModule={currentModule} 
-          onSelectModule={(mod) => setCurrentModule(mod)} 
+          onSelectModule={(mod) => {
+            setCurrentModule(mod);
+            setMobileMenuOpen(false);
+          }} 
+          isMobileOpen={mobileMenuOpen}
+          onCloseMobile={() => setMobileMenuOpen(false)}
         />
 
         {/* Main Area */}
@@ -87,9 +93,10 @@ export const AppContent: React.FC = () => {
           <Navbar 
             activeModule={currentModule}
             onOpenAI={() => setCurrentModule('ai')} 
+            onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
           />
 
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+          <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
               {renderModule()}
             </div>

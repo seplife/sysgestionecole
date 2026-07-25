@@ -16,8 +16,8 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({ student, onC
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-6 relative animate-fadeIn">
+    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-6 relative animate-fadeIn max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between no-print">
           <div className="flex items-center space-x-2 text-brand-600 dark:text-brand-400 font-bold">
