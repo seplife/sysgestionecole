@@ -13,6 +13,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
 
     /* Linting */
     "strict": true,
@@ -20,7 +22,7 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
 
-    "baseUrl": ".",
+    
     "paths": {
       "@/*": ["src/*"]
     }
