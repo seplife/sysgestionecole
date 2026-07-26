@@ -80,7 +80,7 @@ export const LoginModule: React.FC = () => {
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-500 to-indigo-600 p-0.5 shadow-lg shadow-brand-500/30 flex items-center justify-center">
                 <img 
-                  src={currentSchool.logo_url || '/images/logoecole.png'} 
+                  src={currentSchool.logo_url || '/images/logo-ecole.png'} 
                   alt="Logo Établissement"
                   className="w-full h-full object-contain bg-slate-900 rounded-xl p-1" 
                 />
