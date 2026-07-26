@@ -15,6 +15,7 @@ import { HonorRollTab } from './tabs/HonorRollTab';
 import { AwardsTab } from './tabs/AwardsTab';
 import { CertificatesTab } from './tabs/CertificatesTab';
 import { CeremoniesTab } from './tabs/CeremoniesTab';
+import { OfficialReferentialTab } from './tabs/OfficialReferentialTab';
 
 // Modals
 import { ExamModal } from './components/ExamModal';
@@ -22,7 +23,7 @@ import { CertificatePDFModal } from './components/CertificatePDFModal';
 
 export const ExamsModule: React.FC = () => {
   const { currentSchool } = useTenant();
-  const [activeTab, setActiveTab] = useState<'list' | 'grades' | 'rankings' | 'honor' | 'awards' | 'certificates' | 'ceremonies'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'referential' | 'grades' | 'rankings' | 'honor' | 'awards' | 'certificates' | 'ceremonies'>('referential');
   const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -129,6 +130,18 @@ export const ExamsModule: React.FC = () => {
         <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center space-x-2 overflow-x-auto custom-scrollbar">
           
           <button
+            onClick={() => setActiveTab('referential')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${
+              activeTab === 'referential' 
+                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20' 
+                : 'text-amber-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4 text-amber-300" />
+            <span>🇨🇮 Référentiel BAC & BEPC</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('list')}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'list' 
@@ -217,6 +230,17 @@ export const ExamsModule: React.FC = () => {
 
       {/* Main Tab Content */}
       <div className="pt-2">
+        {activeTab === 'referential' && (
+          <OfficialReferentialTab
+            schoolId={currentSchool.id}
+            onExamCreated={(newExam) => {
+              loadExams();
+              setSelectedExam(newExam);
+              setActiveTab('grades');
+            }}
+          />
+        )}
+
         {activeTab === 'list' && (
           <ExamsListTab
             exams={exams}

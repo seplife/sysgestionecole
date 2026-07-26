@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Plus, Trash2, BookOpen, Calculator, Calendar, CheckCircle2 } from 'lucide-react';
+import { X, Plus, Trash2, BookOpen, Calculator, Calendar, CheckCircle2, Sparkles } from 'lucide-react';
 import { Exam, ExamSubject } from '../../../types/database';
+import { OFFICIAL_PRESETS } from '../../../services/examsService';
 
 interface ExamModalProps {
   schoolId: string;
@@ -32,6 +33,29 @@ export const ExamModal: React.FC<ExamModalProps> = ({ schoolId, isOpen, onClose,
   const [saving, setSaving] = useState<boolean>(false);
 
   if (!isOpen) return null;
+
+  const handleApplyPreset = (presetCode: 'SERIE_A' | 'SERIE_D' | 'BEPC_GEN') => {
+    const preset = OFFICIAL_PRESETS.find(p => p.code === presetCode);
+    if (!preset) return;
+
+    setName(`EXAMEN BLANC - ${preset.name} ${new Date().getFullYear()}`);
+    setExamType(preset.exam_code === 'BAC' ? 'BAC_BLANC' : 'BEPC_BLANC');
+    setLevelId(preset.level);
+    setSeriesId(preset.code.replace('SERIE_', ''));
+
+    const loadedSubjects: Partial<ExamSubject>[] = preset.subjects.map(s => ({
+      subject_id: s.subject_id,
+      subject_name: s.subject_name,
+      coefficient: s.coefficient,
+      max_score: s.max_score,
+      is_optional: !s.is_mandatory || s.is_bonus,
+      type: s.type,
+      is_bonus: s.is_bonus,
+      code: s.code
+    }));
+
+    setSubjects(loadedSubjects);
+  };
 
   const handleAddSubject = () => {
     setSubjects([
@@ -107,6 +131,42 @@ export const ExamModal: React.FC<ExamModalProps> = ({ schoolId, isOpen, onClose,
         {/* Modal Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[75vh] custom-scrollbar">
           
+          {/* Quick Preset Selector */}
+          <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+            <div className="flex items-center space-x-2 text-xs font-bold text-amber-400">
+              <Sparkles className="w-4 h-4" />
+              <span>Préréglages Officiels DECO Côte d'Ivoire (Barèmes & Coefficients)</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Cliquez sur un bouton ci-dessous pour charger automatiquement les matières, épreuves et coefficients officiels :
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleApplyPreset('SERIE_A')}
+                className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5"
+              >
+                <span>📖 Charger BAC A (Littéraire - Coeff 20)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleApplyPreset('SERIE_D')}
+                className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5"
+              >
+                <span>🧪 Charger BAC D (Scientifique - Coeff 20)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleApplyPreset('BEPC_GEN')}
+                className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5"
+              >
+                <span>🎓 Charger BEPC Général (Coeff 18)</span>
+              </button>
+            </div>
+          </div>
+
           {/* General Information */}
           <div className="space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-wider text-brand-400">1. Informations Générales</h4>

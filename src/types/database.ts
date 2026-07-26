@@ -490,6 +490,49 @@ export interface Exam {
   candidates_count?: number;
 }
 
+export interface OfficialExam {
+  id: string;
+  code: 'BAC' | 'BEPC' | string;
+  name: string;
+  level_code: 'TERMINALE' | 'TROISIEME' | string;
+  description?: string;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface OfficialSeries {
+  id: string;
+  exam_id: string;
+  code: 'SERIE_A' | 'SERIE_D' | 'BEPC_GEN' | string;
+  name: string;
+  total_mandatory_coefficients: number;
+  max_mandatory_points: number;
+  display_order: number;
+}
+
+export interface OfficialSubject {
+  id: string;
+  code: string;
+  name: string;
+  short_name?: string;
+  category?: string;
+}
+
+export interface OfficialExamSubject {
+  id: string;
+  exam_id: string;
+  series_id: string;
+  subject_id: string;
+  code: string;
+  libelle: string;
+  coefficient: number;
+  type: 'ecrit' | 'oral' | 'pratique' | 'facultatif';
+  is_mandatory: boolean;
+  is_bonus: boolean;
+  max_score: number;
+  display_order: number;
+}
+
 export interface ExamSubject {
   id: string;
   school_id: string;
@@ -499,6 +542,9 @@ export interface ExamSubject {
   coefficient: number;
   max_score: number;
   is_optional: boolean;
+  type?: 'ecrit' | 'oral' | 'pratique' | 'facultatif';
+  is_bonus?: boolean;
+  code?: string;
 }
 
 export interface ExamCandidate {

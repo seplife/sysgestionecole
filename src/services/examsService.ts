@@ -596,10 +596,132 @@ export const examsService = {
     }
 
     // Default fallback mock certificate for testing if verification code contains TEST or DEMO
+    // Default fallback mock certificate for testing if verification code contains TEST or DEMO
     if (code.includes('987654') || code.includes('VERIF-STV-2026')) {
       return seedInitialCertificates('school-palmeraie-01')[0];
     }
 
     return null;
+  },
+
+  // 7. RÉFÉRENTIEL NATIONAL DES EXAMENS OFFICIELS (DECO CÔTE D'IVOIRE)
+  getOfficialPresets(): OfficialExamPreset[] {
+    return OFFICIAL_PRESETS;
+  },
+
+  async createExamFromPreset(
+    schoolId: string, 
+    presetCode: 'SERIE_A' | 'SERIE_D' | 'BEPC_GEN',
+    customName?: string
+  ): Promise<Exam> {
+    const preset = OFFICIAL_PRESETS.find(p => p.code === presetCode) || OFFICIAL_PRESETS[0];
+    const examName = customName || `EXAMEN OFFICIEL - ${preset.name} ${new Date().getFullYear()}`;
+
+    const examSubjects: Partial<ExamSubject>[] = preset.subjects.map(s => ({
+      subject_id: s.subject_id,
+      subject_name: s.subject_name,
+      coefficient: s.coefficient,
+      max_score: s.max_score,
+      is_optional: !s.is_mandatory || s.is_bonus,
+      type: s.type,
+      is_bonus: s.is_bonus,
+      code: s.code
+    }));
+
+    return this.createExam(
+      {
+        school_id: schoolId,
+        name: examName,
+        exam_type: preset.exam_code === 'BAC' ? 'BAC_BLANC' : 'BEPC_BLANC',
+        level_id: preset.level,
+        series_id: preset.code.replace('SERIE_', ''),
+        status: 'draft'
+      },
+      examSubjects
+    );
   }
 };
+
+export interface OfficialExamPreset {
+  code: 'SERIE_A' | 'SERIE_D' | 'BEPC_GEN';
+  exam_code: 'BAC' | 'BEPC';
+  name: string;
+  level: string;
+  total_mandatory_coefficients: number;
+  max_mandatory_points: number;
+  subjects: {
+    code: string;
+    subject_id: string;
+    subject_name: string;
+    coefficient: number;
+    type: 'ecrit' | 'oral' | 'pratique' | 'facultatif';
+    is_mandatory: boolean;
+    is_bonus: boolean;
+    max_score: number;
+    display_order: number;
+  }[];
+}
+
+export const OFFICIAL_PRESETS: OfficialExamPreset[] = [
+  {
+    code: 'SERIE_A',
+    exam_code: 'BAC',
+    name: 'BAC Série A (Littéraire)',
+    level: 'Terminale',
+    total_mandatory_coefficients: 20,
+    max_mandatory_points: 400,
+    subjects: [
+      { code: 'BAC_A_PHILO', subject_id: 'Philosophie', subject_name: 'Philosophie', coefficient: 5, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 1 },
+      { code: 'BAC_A_FR_ECRIT', subject_id: 'Français Écrit', subject_name: 'Français (Écrit)', coefficient: 3, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 2 },
+      { code: 'BAC_A_HIST_GEO', subject_id: 'Histoire-Géo', subject_name: 'Histoire-Géographie', coefficient: 3, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 3 },
+      { code: 'BAC_A_LV1_ECRIT', subject_id: 'LV1 Écrit', subject_name: 'LV1 (Écrit)', coefficient: 2, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 4 },
+      { code: 'BAC_A_LV2_ECRIT', subject_id: 'LV2 Écrit', subject_name: 'LV2 (Écrit)', coefficient: 2, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 5 },
+      { code: 'BAC_A_MATHS', subject_id: 'Mathématiques', subject_name: 'Mathématiques', coefficient: 2, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 6 },
+      { code: 'BAC_A_FR_ORAL', subject_id: 'Français Oral', subject_name: 'Français (Oral)', coefficient: 1, type: 'oral', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 7 },
+      { code: 'BAC_A_LV1_ORAL', subject_id: 'LV1 Oral', subject_name: 'LV1 (Oral)', coefficient: 1, type: 'oral', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 8 },
+      { code: 'BAC_A_LV2_ORAL', subject_id: 'LV2 Oral', subject_name: 'LV2 (Oral)', coefficient: 1, type: 'oral', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 9 },
+      { code: 'BAC_A_EPS', subject_id: 'EPS', subject_name: 'Éducation Physique et Sportive (EPS)', coefficient: 1, type: 'facultatif', is_mandatory: false, is_bonus: true, max_score: 20, display_order: 10 }
+    ]
+  },
+  {
+    code: 'SERIE_D',
+    exam_code: 'BAC',
+    name: 'BAC Série D (Scientifique)',
+    level: 'Terminale',
+    total_mandatory_coefficients: 20,
+    max_mandatory_points: 400,
+    subjects: [
+      { code: 'BAC_D_MATHS', subject_id: 'Mathématiques', subject_name: 'Mathématiques', coefficient: 4, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 1 },
+      { code: 'BAC_D_SVT', subject_id: 'SVT', subject_name: 'Sciences de la Vie et de la Terre (SVT)', coefficient: 4, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 2 },
+      { code: 'BAC_D_PHYS_CHIM', subject_id: 'Physique-Chimie', subject_name: 'Physique-Chimie', coefficient: 4, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 3 },
+      { code: 'BAC_D_FR_ECRIT', subject_id: 'Français Écrit', subject_name: 'Français (Écrit)', coefficient: 2, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 4 },
+      { code: 'BAC_D_PHILO', subject_id: 'Philosophie', subject_name: 'Philosophie', coefficient: 2, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 5 },
+      { code: 'BAC_D_HIST_GEO', subject_id: 'Histoire-Géo', subject_name: 'Histoire-Géographie', coefficient: 2, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 6 },
+      { code: 'BAC_D_FR_ORAL', subject_id: 'Français Oral', subject_name: 'Français (Oral)', coefficient: 1, type: 'oral', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 7 },
+      { code: 'BAC_D_ANGLAIS_ORAL', subject_id: 'Anglais Oral', subject_name: 'Anglais (Oral)', coefficient: 1, type: 'oral', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 8 },
+      { code: 'BAC_D_EPS', subject_id: 'EPS', subject_name: 'Éducation Physique et Sportive (EPS)', coefficient: 1, type: 'facultatif', is_mandatory: false, is_bonus: true, max_score: 20, display_order: 9 }
+    ]
+  },
+  {
+    code: 'BEPC_GEN',
+    exam_code: 'BEPC',
+    name: 'BEPC Général',
+    level: '3ème',
+    total_mandatory_coefficients: 18,
+    max_mandatory_points: 360,
+    subjects: [
+      { code: 'BEPC_MATHS', subject_id: 'Mathématiques', subject_name: 'Mathématiques', coefficient: 3, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 1 },
+      { code: 'BEPC_COMP_FR', subject_id: 'Composition Française', subject_name: 'Composition Française', coefficient: 2, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 2 },
+      { code: 'BEPC_ORTHO', subject_id: 'Orthographe', subject_name: 'Orthographe / Dictée', coefficient: 2, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 3 },
+      { code: 'BEPC_PHYS_CHIM', subject_id: 'Physique-Chimie', subject_name: 'Physique-Chimie', coefficient: 2, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 4 },
+      { code: 'BEPC_SVT', subject_id: 'SVT', subject_name: 'Sciences de la Vie et de la Terre (SVT)', coefficient: 2, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 5 },
+      { code: 'BEPC_HIST_GEO', subject_id: 'Histoire-Géo', subject_name: 'Histoire-Géographie', coefficient: 2, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 6 },
+      { code: 'BEPC_ANGLAIS_ECRIT', subject_id: 'Anglais Écrit', subject_name: 'Anglais (Écrit)', coefficient: 1, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 7 },
+      { code: 'BEPC_ANGLAIS_ORAL', subject_id: 'Anglais Oral', subject_name: 'Anglais (Oral)', coefficient: 1, type: 'oral', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 8 },
+      { code: 'BEPC_LV2', subject_id: 'LV2 Écrit', subject_name: 'LV2 (Espagnol / Allemand)', coefficient: 1, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 9 },
+      { code: 'BEPC_EDHC', subject_id: 'EDHC', subject_name: 'EDHC', coefficient: 1, type: 'ecrit', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 10 },
+      { code: 'BEPC_EPS', subject_id: 'EPS', subject_name: 'Éducation Physique et Sportive (EPS)', coefficient: 1, type: 'pratique', is_mandatory: true, is_bonus: false, max_score: 20, display_order: 11 },
+      { code: 'BEPC_ARTS', subject_id: 'Arts', subject_name: 'Arts Plastiques / Éducation Musicale', coefficient: 1, type: 'facultatif', is_mandatory: false, is_bonus: true, max_score: 20, display_order: 12 }
+    ]
+  }
+];
