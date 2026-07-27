@@ -56,19 +56,19 @@ export const OfficialReferentialTab: React.FC<OfficialReferentialTabProps> = ({ 
     <div className="space-y-6">
       
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-2xl p-6 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-500/30 rounded-2xl p-6 relative overflow-hidden bg-white dark:bg-slate-900">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center space-x-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+              <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-500 text-slate-950 shadow-xs flex items-center space-x-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-950" />
                 <span>Normes Décret MENA / DECO Côte d'Ivoire</span>
               </span>
             </div>
-            <h2 className="text-xl font-black text-white tracking-tight">
+            <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
               Référentiel Officiel des Examens Nationaux (BAC & BEPC)
             </h2>
-            <p className="text-xs text-slate-400 max-w-2xl">
+            <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl font-medium">
               Barème officiel des séries, matières, épreuves obligatoires & bonus, coefficients réglementaires et règles de délibération d'État.
             </p>
           </div>

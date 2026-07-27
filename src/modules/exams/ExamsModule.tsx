@@ -91,23 +91,23 @@ export const ExamsModule: React.FC = () => {
     <div className="space-y-6 select-none font-sans">
       
       {/* Module Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-96 h-full bg-gradient-to-l from-amber-500/10 via-brand-500/5 to-transparent pointer-events-none" />
+      <div className="bg-gradient-to-r from-brand-600 via-indigo-700 to-amber-600 border border-brand-400/30 rounded-3xl p-6 shadow-xl relative overflow-hidden text-white">
+        <div className="absolute right-0 top-0 w-96 h-full bg-white/10 backdrop-blur-3xl pointer-events-none rounded-full blur-2xl" />
 
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center space-x-1">
-                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+              <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-400 text-slate-950 shadow-xs flex items-center space-x-1">
+                <Trophy className="w-3.5 h-3.5 text-amber-900" />
                 <span>Système d'Évaluation MENA</span>
               </span>
-              <span className="text-xs text-slate-400 font-mono">IvoireÉcole+ v2.5</span>
+              <span className="text-xs text-amber-100 font-mono font-bold">IvoireÉcole+ v2.5</span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-xs">
               Examens Blancs & Distinctions Scolaires
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 max-w-2xl">
+            <p className="text-xs sm:text-sm text-slate-100 max-w-2xl font-medium">
               Gestion centralisée des BAC & BEPC Blancs, calcul automatisé des moyennes/rangs, tableaux d'honneur et certificats sécurisés par QR Code.
             </p>
           </div>
@@ -118,35 +118,35 @@ export const ExamsModule: React.FC = () => {
                 setEditingExam(null);
                 setShowExamModal(true);
               }}
-              className="px-4 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-brand-500/20 flex items-center space-x-2 shrink-0"
+              className="px-5 py-2.5 bg-white hover:bg-slate-100 text-brand-700 rounded-xl text-xs font-extrabold transition-all shadow-lg flex items-center space-x-2 shrink-0"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 text-brand-600" />
               <span>Créer Examen Blanc</span>
             </button>
           </div>
         </div>
 
         {/* Navigation Tabs Bar */}
-        <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center space-x-2 overflow-x-auto custom-scrollbar">
+        <div className="mt-6 pt-4 border-t border-white/20 flex items-center space-x-2 overflow-x-auto custom-scrollbar">
           
           <button
             onClick={() => setActiveTab('referential')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'referential' 
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20' 
-                : 'text-amber-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-amber-400 text-slate-950 shadow-md' 
+                : 'text-white hover:bg-white/15'
             }`}
           >
-            <ShieldCheck className="w-4 h-4 text-amber-300" />
+            <ShieldCheck className="w-4 h-4" />
             <span>🇨🇮 Référentiel BAC & BEPC</span>
           </button>
 
           <button
             onClick={() => setActiveTab('list')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'list' 
-                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-white text-brand-700 shadow-md' 
+                : 'text-white hover:bg-white/15'
             }`}
           >
             <BookOpen className="w-4 h-4" />
@@ -155,10 +155,10 @@ export const ExamsModule: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('grades')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'grades' 
-                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-white text-brand-700 shadow-md' 
+                : 'text-white hover:bg-white/15'
             }`}
           >
             <Layers className="w-4 h-4" />
@@ -167,10 +167,10 @@ export const ExamsModule: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('rankings')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'rankings' 
-                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-white text-brand-700 shadow-md' 
+                : 'text-white hover:bg-white/15'
             }`}
           >
             <Trophy className="w-4 h-4" />
@@ -179,50 +179,50 @@ export const ExamsModule: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('honor')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'honor' 
-                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-white text-brand-700 shadow-md' 
+                : 'text-white hover:bg-white/15'
             }`}
           >
-            <Star className="w-4 h-4 text-amber-300" />
+            <Star className="w-4 h-4" />
             <span>⭐ Tableau d'Honneur</span>
           </button>
 
           <button
             onClick={() => setActiveTab('awards')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'awards' 
-                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-white text-brand-700 shadow-md' 
+                : 'text-white hover:bg-white/15'
             }`}
           >
-            <Award className="w-4 h-4 text-amber-300" />
+            <Award className="w-4 h-4" />
             <span>🎓 Distinctions & Prix</span>
           </button>
 
           <button
             onClick={() => setActiveTab('certificates')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'certificates' 
-                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-white text-brand-700 shadow-md' 
+                : 'text-white hover:bg-white/15'
             }`}
           >
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <ShieldCheck className="w-4 h-4" />
             <span>📜 Certificats QR Code</span>
           </button>
 
           <button
             onClick={() => setActiveTab('ceremonies')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'ceremonies' 
-                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-white text-brand-700 shadow-md' 
+                : 'text-white hover:bg-white/15'
             }`}
           >
-            <Gift className="w-4 h-4 text-purple-400" />
-            <span>🎁 Récompenses & Palmarès</span>
+            <Gift className="w-4 h-4" />
+            <span>🎁 Palmarès</span>
           </button>
 
         </div>
