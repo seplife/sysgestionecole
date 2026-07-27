@@ -91,7 +91,7 @@ export const ExamsModule: React.FC = () => {
     <div className="space-y-6 select-none font-sans">
       
       {/* Module Header Banner */}
-      <div className="bg-gradient-to-r from-brand-600 via-indigo-700 to-amber-600 border border-brand-400/30 rounded-3xl p-6 shadow-xl relative overflow-hidden text-white">
+      <div className="bg-gradient-to-r from-brand-600 via-indigo-700 to-gray-800 border border-brand-400/30 rounded-3xl p-6 shadow-xl relative overflow-hidden text-white">
         <div className="absolute right-0 top-0 w-96 h-full bg-white/10 backdrop-blur-3xl pointer-events-none rounded-full blur-2xl" />
 
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
