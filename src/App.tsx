@@ -25,6 +25,9 @@ import { AIAssistantModule } from './modules/ai/AIAssistantModule';
 import { SchoolManagementModule } from './modules/school/SchoolManagementModule';
 import { SuperAdminModule } from './modules/superadmin/SuperAdminModule';
 import { LibraryModule, TransportModule, CafeteriaModule } from './modules/extra/AuxiliaryModules';
+import { HRModule } from './modules/hr/HRModule';
+import { PayrollModule } from './modules/payroll/PayrollModule';
+import { BudgetModule } from './modules/budget/BudgetModule';
 
 export const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -53,6 +56,12 @@ export const AppContent: React.FC = () => {
     switch (currentModule) {
       case 'dashboard':
         return <DashboardModule onNavigate={(m) => setCurrentModule(m)} onOpenAI={() => setCurrentModule('ai')} />;
+      case 'hr':
+        return <HRModule />;
+      case 'payroll':
+        return <PayrollModule />;
+      case 'budget':
+        return <BudgetModule />;
       case 'students':
         return <StudentListModule />;
       case 'parents':

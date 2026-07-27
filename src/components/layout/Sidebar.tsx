@@ -35,6 +35,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const menuItems: MenuItem[] = [
     { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+    { id: 'hr', label: 'Gestion du Personnel (RH)', icon: Users, badge: 'RH' },
+    { id: 'payroll', label: 'Gestion de la Paie', icon: CreditCard, badge: 'Bulletins' },
+    { id: 'budget', label: 'Budget & Comptabilité', icon: FileSpreadsheet, badge: 'Budget' },
     { id: 'students', label: 'Élèves & Inscriptions', icon: Users, badge: '42' },
     { id: 'parents', label: 'Parents & Tuteurs', icon: UserCheck },
     { id: 'classes', label: 'Classes & Niveaux', icon: GraduationCap },
@@ -44,7 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'grades', label: 'Notes & Évaluations', icon: FileSpreadsheet },
     { id: 'reports', label: 'Bulletins Scolaires', icon: Award, badge: 'PDF' },
     { id: 'exams', label: 'Examens & Distinctions', icon: Trophy, badge: 'BAC/BEPC' },
-    { id: 'finance', label: 'Finances & Mobile Money', icon: CreditCard },
+    { id: 'finance', label: 'Recouvrement Mobile Money', icon: CreditCard },
     { id: 'communication', label: 'WhatsApp & SMS', icon: MessageSquare, badge: 'Chatbot' },
     { id: 'library', label: 'Bibliothèque', icon: Library },
     { id: 'transport', label: 'Transport Scolaire', icon: Bus },
