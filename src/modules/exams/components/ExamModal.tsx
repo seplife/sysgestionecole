@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, BookOpen, Calculator, Calendar, CheckCircle2, Sparkles } from 'lucide-react';
-import { Exam, ExamSubject } from '../../../types/database';
+import { Exam, ExamSubject, SchoolClass } from '../../../types/database';
 import { OFFICIAL_PRESETS } from '../../../services/examsService';
+import { supabaseService } from '../../../services/supabaseService';
 
 interface ExamModalProps {
   schoolId: string;
@@ -30,7 +31,22 @@ export const ExamModal: React.FC<ExamModalProps> = ({ schoolId, isOpen, onClose,
   const [endDate, setEndDate] = useState<string>(existingExam?.end_date || new Date().toISOString().split('T')[0]);
   const [status, setStatus] = useState<string>(existingExam?.status || 'draft');
   const [subjects, setSubjects] = useState<Partial<ExamSubject>[]>(DEFAULT_SUBJECTS);
+  const [availableClasses, setAvailableClasses] = useState<SchoolClass[]>([]);
   const [saving, setSaving] = useState<boolean>(false);
+
+  useEffect(() => {
+    loadRealClasses();
+  }, [schoolId]);
+
+  const loadRealClasses = async () => {
+    try {
+      const cls = await supabaseService.fetchClasses();
+      const filtered = cls.filter(c => !c.school_id || c.school_id === schoolId);
+      setAvailableClasses(filtered);
+    } catch (e) {
+      console.warn('Error loading real classes for ExamModal', e);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -199,19 +215,31 @@ export const ExamModal: React.FC<ExamModalProps> = ({ schoolId, isOpen, onClose,
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Niveau Cible</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Niveau ou Classe Cible</label>
                 <select
                   value={levelId}
                   onChange={(e) => setLevelId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-brand-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-brand-500 font-semibold"
                 >
-                  <option value="6ème">6ème</option>
-                  <option value="5ème">5ème</option>
-                  <option value="4ème">4ème</option>
-                  <option value="3ème">3ème</option>
-                  <option value="2nde">2nde</option>
-                  <option value="1ère">1ère</option>
-                  <option value="Terminale">Terminale</option>
+                  <optgroup label="Niveaux Réglementaires">
+                    <option value="6ème">6ème</option>
+                    <option value="5ème">5ème</option>
+                    <option value="4ème">4ème</option>
+                    <option value="3ème">3ème (BEPC)</option>
+                    <option value="2nde">2nde</option>
+                    <option value="1ère">1ère</option>
+                    <option value="Terminale">Terminale (BAC)</option>
+                  </optgroup>
+                  
+                  {availableClasses.length > 0 && (
+                    <optgroup label="Classes Enregistrées dans l'École">
+                      {availableClasses.map(c => (
+                        <option key={c.id} value={c.name}>
+                          {c.name} ({c.level_name || 'Général'})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
 

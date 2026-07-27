@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { supabaseService } from './supabaseService';
 import { 
   Exam, ExamSubject, ExamCandidate, ExamGrade, ExamResult,
   HonorRollConfig, HonorRoll, HonorRollEntry, Award, Certificate, ExamStatus
@@ -294,19 +295,84 @@ export const examsService = {
   },
 
   async getExamCandidates(examId: string, schoolId: string): Promise<ExamCandidate[]> {
+    let dbCandidates: ExamCandidate[] = [];
     try {
       const { data } = await supabase.from('exam_candidates').select('*').eq('exam_id', examId);
-      if (data && data.length > 0) return data as ExamCandidate[];
+      if (data && data.length > 0) {
+        dbCandidates = data as ExamCandidate[];
+      }
     } catch (e) {
       console.warn('Supabase fetch candidates fallback', e);
     }
-    return getCache<ExamCandidate[]>(`${EXAM_CANDIDATES_KEY}_${examId}`, [
-      { id: 'ec-1', school_id: schoolId, exam_id: examId, student_id: 'stu-1', student_name: 'KOUASSI Amenan Grace', registration_number: '2026-STV-0012', class_id: 'c-3a', class_name: '3ème A', candidate_number: 'CAND-001' },
-      { id: 'ec-2', school_id: schoolId, exam_id: examId, student_id: 'stu-2', student_name: 'DIABATÉ Mohamed Lamine', registration_number: '2026-STV-0045', class_id: 'c-3a', class_name: '3ème A', candidate_number: 'CAND-002' },
-      { id: 'ec-3', school_id: schoolId, exam_id: examId, student_id: 'stu-3', student_name: 'N\'DRI Jean-Marc', registration_number: '2026-STV-0089', class_id: 'c-3b', class_name: '3ème B', candidate_number: 'CAND-003' },
-      { id: 'ec-4', school_id: schoolId, exam_id: examId, student_id: 'stu-4', student_name: 'KONAN Koffi Axel', registration_number: '2026-STV-0110', class_id: 'c-3b', class_name: '3ème B', candidate_number: 'CAND-004' },
-      { id: 'ec-5', school_id: schoolId, exam_id: examId, student_id: 'stu-5', student_name: 'YAPO Marie-Michelle', registration_number: '2026-STV-0142', class_id: 'c-3a', class_name: '3ème A', candidate_number: 'CAND-005' },
-    ]);
+
+    if (dbCandidates.length === 0) {
+      dbCandidates = getCache<ExamCandidate[]>(`${EXAM_CANDIDATES_KEY}_${examId}`, []);
+    }
+
+    // Dynamic Live Sync with Students & Classes registered in the school
+    const realStudents = await supabaseService.fetchStudents();
+    const schoolStudents = realStudents.filter(s => !s.school_id || s.school_id === schoolId);
+
+    // Get exam to inspect level/class target filter if applicable
+    const exams = await this.getExams(schoolId);
+    const exam = exams.find(e => e.id === examId);
+
+    const candidateMap = new Map<string, ExamCandidate>();
+    dbCandidates.forEach(c => candidateMap.set(c.student_id, c));
+
+    // Filter registered students matching exam level if set
+    let targetStudents = schoolStudents;
+    if (exam && exam.level_id) {
+      const levelNorm = exam.level_id.toLowerCase().replace('ème', '').replace('ter', 'tle').trim();
+      const filtered = schoolStudents.filter(s => {
+        if (!s.current_class_name) return true;
+        const clsNorm = s.current_class_name.toLowerCase();
+        return clsNorm.includes(levelNorm) || clsNorm.includes(exam.level_id.toLowerCase());
+      });
+      if (filtered.length > 0) {
+        targetStudents = filtered;
+      }
+    }
+
+    // Merge registered students into candidates
+    targetStudents.forEach((stu, idx) => {
+      if (!candidateMap.has(stu.id)) {
+        candidateMap.set(stu.id, {
+          id: `cand-${examId}-${stu.id}`,
+          school_id: schoolId,
+          exam_id: examId,
+          student_id: stu.id,
+          student_name: `${stu.last_name} ${stu.first_name}`,
+          registration_number: stu.registration_number || `MAT-${stu.id.slice(-4)}`,
+          class_id: stu.current_class_name || 'Classe',
+          class_name: stu.current_class_name || 'Classe non assignée',
+          candidate_number: `CAND-${(idx + 1).toString().padStart(3, '0')}`,
+          created_at: new Date().toISOString()
+        });
+      }
+    });
+
+    // Fallback default candidates if no students exist in system at all
+    if (candidateMap.size === 0) {
+      [
+        { id: 'ec-1', school_id: schoolId, exam_id: examId, student_id: 'stu-1', student_name: 'KOUASSI Amenan Grace', registration_number: '2026-STV-0012', class_id: 'c-3a', class_name: '3ème A', candidate_number: 'CAND-001' },
+        { id: 'ec-2', school_id: schoolId, exam_id: examId, student_id: 'stu-2', student_name: 'DIABATÉ Mohamed Lamine', registration_number: '2026-STV-0045', class_id: 'c-3a', class_name: '3ème A', candidate_number: 'CAND-002' },
+        { id: 'ec-3', school_id: schoolId, exam_id: examId, student_id: 'stu-3', student_name: 'N\'DRI Jean-Marc', registration_number: '2026-STV-0089', class_id: 'c-3b', class_name: '3ème B', candidate_number: 'CAND-003' }
+      ].forEach(c => candidateMap.set(c.student_id, c as ExamCandidate));
+    }
+
+    const finalCandidates = Array.from(candidateMap.values());
+    setCache(`${EXAM_CANDIDATES_KEY}_${examId}`, finalCandidates);
+
+    // Update candidates_count on exam cache
+    if (exam && exam.candidates_count !== finalCandidates.length) {
+      exam.candidates_count = finalCandidates.length;
+      const allExams = getCache<Exam[]>(`${EXAMS_KEY}_${schoolId}`, []);
+      const updatedExams = allExams.map(e => e.id === examId ? { ...e, candidates_count: finalCandidates.length } : e);
+      setCache(`${EXAMS_KEY}_${schoolId}`, updatedExams);
+    }
+
+    return finalCandidates;
   },
 
   // 3. GRADES ENTRY & CALCULATION ENGINE

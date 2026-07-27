@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FileSpreadsheet, Upload, Save, Calculator, CheckCircle2, 
-  AlertCircle, Search, User, Filter, ArrowRight
+  AlertCircle, Search, User, Filter, ArrowRight, Lock, Unlock, Sparkles, RefreshCw
 } from 'lucide-react';
 import { Exam, ExamSubject, ExamCandidate, ExamGrade, ExamResult } from '../../../types/database';
-import { examsService } from '../../../services/examsService';
+import { examsService, OFFICIAL_PRESETS } from '../../../services/examsService';
 
 interface GradesEntryTabProps {
   schoolId: string;
@@ -32,6 +32,13 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
   const [showExcelModal, setShowExcelModal] = useState<boolean>(false);
   const [excelPreviewData, setExcelPreviewData] = useState<any[]>([]);
 
+  // Auto-select first exam if none selected
+  useEffect(() => {
+    if (exams.length > 0 && !selectedExam) {
+      onSelectExam(exams[0]);
+    }
+  }, [exams, selectedExam]);
+
   useEffect(() => {
     if (!selectedExam) return;
     loadExamData(selectedExam.id);
@@ -53,6 +60,56 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
       };
     });
     setGradesMap(initialMap);
+  };
+
+  const handleToggleEntryStatus = async () => {
+    if (!selectedExam) return;
+    const newStatus = selectedExam.status === 'in_progress' ? 'draft' : 'in_progress';
+    await examsService.updateExamStatus(selectedExam.id, schoolId, newStatus);
+    onSelectExam({ ...selectedExam, status: newStatus });
+  };
+
+  const handleQuickLoadPreset = async (presetCode: 'SERIE_A' | 'SERIE_D' | 'BEPC_GEN') => {
+    if (!selectedExam) return;
+    const preset = OFFICIAL_PRESETS.find(p => p.code === presetCode);
+    if (!preset) return;
+
+    const formattedSubjects: Partial<ExamSubject>[] = preset.subjects.map(s => ({
+      subject_id: s.subject_id,
+      subject_name: s.subject_name,
+      coefficient: s.coefficient,
+      max_score: s.max_score,
+      is_optional: !s.is_mandatory || s.is_bonus,
+      type: s.type,
+      is_bonus: s.is_bonus,
+      code: s.code
+    }));
+
+    await examsService.createExam(
+      {
+        ...selectedExam,
+        exam_type: preset.exam_code === 'BAC' ? 'BAC_BLANC' : 'BEPC_BLANC',
+        level_id: preset.level
+      },
+      formattedSubjects
+    );
+
+    loadExamData(selectedExam.id);
+  };
+
+  const handleFillSampleScores = () => {
+    const newMap = { ...gradesMap };
+    candidates.forEach((cand, idx) => {
+      subjects.forEach((subj, sIdx) => {
+        const baseScore = Number((11 + (idx * 2.3 + sIdx * 1.7) % 8.5).toFixed(2));
+        newMap[`${cand.student_id}_${subj.subject_id}`] = {
+          score: baseScore,
+          is_absent: false
+        };
+      });
+    });
+    setGradesMap(newMap);
+    setSavedSuccess(true);
   };
 
   const handleScoreChange = (studentId: string, subjectId: string, val: string) => {
@@ -176,28 +233,64 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
           <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
             Sélectionner l'Examen Blanc Cible
           </label>
-          <select
-            value={selectedExam?.id || ''}
-            onChange={(e) => {
-              const ex = exams.find(x => x.id === e.target.value);
-              if (ex) onSelectExam(ex);
-            }}
-            className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm font-semibold focus:outline-none focus:border-brand-500"
-          >
-            {exams.map(e => (
-              <option key={e.id} value={e.id}>
-                {e.name} ({e.level_id}) — {e.status.toUpperCase()}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center space-x-2">
+            <select
+              value={selectedExam?.id || ''}
+              onChange={(e) => {
+                const ex = exams.find(x => x.id === e.target.value);
+                if (ex) onSelectExam(ex);
+              }}
+              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm font-semibold focus:outline-none focus:border-brand-500"
+            >
+              {exams.map(e => (
+                <option key={e.id} value={e.id}>
+                  {e.name} ({e.level_id}) — {e.status === 'in_progress' ? '🔓 SAISIE OUVERTE' : e.status.toUpperCase()}
+                </option>
+              ))}
+            </select>
+
+            {selectedExam && (
+              <button
+                onClick={handleToggleEntryStatus}
+                title={selectedExam.status === 'in_progress' ? 'Désactiver / Verrouiller la Saisie' : 'Activer la Saisie des Notes'}
+                className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 border ${
+                  selectedExam.status === 'in_progress'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                }`}
+              >
+                {selectedExam.status === 'in_progress' ? (
+                  <>
+                    <Unlock className="w-4 h-4 text-emerald-400" />
+                    <span>Saisie Active</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4 text-amber-400" />
+                    <span>Activer Saisie</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
           
+          <button
+            onClick={handleFillSampleScores}
+            disabled={!selectedExam || subjects.length === 0}
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-purple-300 rounded-xl text-xs font-semibold transition-colors flex items-center space-x-2 border border-purple-500/20 disabled:opacity-50"
+            title="Pré-remplir la grille avec des notes de démonstration"
+          >
+            <Sparkles className="w-4 h-4 text-purple-400" />
+            <span>Simulation Notes</span>
+          </button>
+
           <label className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-xl text-xs font-semibold cursor-pointer transition-colors flex items-center space-x-2 border border-amber-500/20">
             <Upload className="w-4 h-4" />
-            <span>Importer Excel (.xlsx)</span>
+            <span>Importer Excel</span>
             <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
           </label>
 
@@ -207,7 +300,7 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
             className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-2 disabled:opacity-50"
           >
             <Save className="w-4 h-4 text-emerald-400" />
-            <span>{saving ? 'Sauvegarde...' : 'Sauvegarder Grille'}</span>
+            <span>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</span>
           </button>
 
           <button
@@ -216,11 +309,41 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
             className="px-5 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20 flex items-center space-x-2 disabled:opacity-50"
           >
             <Calculator className="w-4 h-4" />
-            <span>{calculating ? 'Calcul en cours...' : 'Déclencher Moteur de Calcul'}</span>
+            <span>{calculating ? 'Calcul en cours...' : 'Calculer Moyennes'}</span>
           </button>
 
         </div>
       </div>
+
+      {/* Zero subjects warning & quick activation */}
+      {selectedExam && subjects.length === 0 && (
+        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-3">
+          <div className="flex items-center space-x-2 text-amber-300 font-bold text-xs">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Aucune épreuve configurée pour cet examen. Chargez un barème officiel pour activer immédiatement la grille de saisie :</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => handleQuickLoadPreset('SERIE_A')}
+              className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+            >
+              <span>📖 Activer Barème BAC A (Littéraire - Coeff 20)</span>
+            </button>
+            <button
+              onClick={() => handleQuickLoadPreset('SERIE_D')}
+              className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+            >
+              <span>🧪 Activer Barème BAC D (Scientifique - Coeff 20)</span>
+            </button>
+            <button
+              onClick={() => handleQuickLoadPreset('BEPC_GEN')}
+              className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+            >
+              <span>🎓 Activer Barème BEPC Général (Coeff 18)</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {savedSuccess && (
         <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-emerald-300 text-xs font-semibold flex items-center space-x-2 animate-fade-in">
