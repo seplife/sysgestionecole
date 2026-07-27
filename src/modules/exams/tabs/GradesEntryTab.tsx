@@ -319,25 +319,25 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
       {selectedExam && subjects.length === 0 && (
         <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-3">
           <div className="flex items-center space-x-2 text-amber-300 font-bold text-xs">
-            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <AlertCircle className="w-4 h-4 text-red shrink-0" />
             <span>Aucune épreuve configurée pour cet examen. Chargez un barème officiel pour activer immédiatement la grille de saisie :</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => handleQuickLoadPreset('SERIE_A')}
-              className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+              className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-black border border-purple-500/40 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
             >
               <span>📖 Activer Barème BAC A (Littéraire - Coeff 20)</span>
             </button>
             <button
               onClick={() => handleQuickLoadPreset('SERIE_D')}
-              className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+              className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-black border border-blue-500/40 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
             >
               <span>🧪 Activer Barème BAC D (Scientifique - Coeff 20)</span>
             </button>
             <button
               onClick={() => handleQuickLoadPreset('BEPC_GEN')}
-              className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+              className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-black border border-emerald-500/40 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
             >
               <span>🎓 Activer Barème BEPC Général (Coeff 18)</span>
             </button>
