@@ -110,34 +110,34 @@ export const OfficialReferentialTab: React.FC<OfficialReferentialTabProps> = ({ 
               onClick={() => setSelectedPresetCode(preset.code)}
               className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
                 isSelected
-                  ? 'bg-slate-900 border-brand-500/60 shadow-xl shadow-brand-500/10 ring-1 ring-brand-500/50'
-                  : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
+                  ? 'bg-white dark:bg-slate-900 border-brand-500 shadow-md ring-2 ring-brand-500/20'
+                  : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-brand-300'
               }`}
             >
               <div className="flex items-center justify-between w-full mb-2">
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                   preset.exam_code === 'BAC'
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                    : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                    ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+                    : 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
                 }`}>
                   {preset.exam_code} — {preset.level}
                 </span>
 
                 {isSelected && (
-                  <CheckCircle2 className="w-4 h-4 text-brand-400" />
+                  <CheckCircle2 className="w-4 h-4 text-brand-600" />
                 )}
               </div>
 
               <div>
-                <h3 className="text-sm font-black text-white">{preset.name}</h3>
-                <p className="text-xs text-slate-400 mt-1">
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">{preset.name}</h3>
+                <p className="text-xs text-slate-500 mt-1 font-medium">
                   {preset.subjects.length} Épreuves au total
                 </p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 font-mono">
-                <span>Coeff total : <strong className="text-white font-bold">{preset.total_mandatory_coefficients}</strong></span>
-                <span>Points max : <strong className="text-brand-400 font-bold">{preset.max_mandatory_points} pts</strong></span>
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 font-mono">
+                <span>Coeff total : <strong className="text-slate-900 dark:text-white font-bold">{preset.total_mandatory_coefficients}</strong></span>
+                <span>Points max : <strong className="text-brand-600 font-bold">{preset.max_mandatory_points} pts</strong></span>
               </div>
             </button>
           );
@@ -146,63 +146,63 @@ export const OfficialReferentialTab: React.FC<OfficialReferentialTabProps> = ({ 
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl space-y-1">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-1 shadow-xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
-            <Scale className="w-3.5 h-3.5 text-brand-400" />
+            <Scale className="w-3.5 h-3.5 text-brand-500" />
             <span>Coefficients Obligatoires</span>
           </span>
-          <p className="text-2xl font-black text-white">{currentPreset.total_mandatory_coefficients}</p>
-          <p className="text-[10px] text-slate-500">Hors épreuves facultatives/bonus</p>
+          <p className="text-2xl font-black text-slate-900 dark:text-white">{currentPreset.total_mandatory_coefficients}</p>
+          <p className="text-[10px] text-slate-400 font-medium">Hors épreuves facultatives/bonus</p>
         </div>
 
-        <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl space-y-1">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-1 shadow-xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
-            <Calculator className="w-3.5 h-3.5 text-amber-400" />
+            <Calculator className="w-3.5 h-3.5 text-amber-500" />
             <span>Points Max Obligatoires</span>
           </span>
-          <p className="text-2xl font-black text-amber-400">{currentPreset.max_mandatory_points} <span className="text-xs text-slate-400 font-normal">pts</span></p>
-          <p className="text-[10px] text-slate-500">Note minimale d'admission: {currentPreset.max_mandatory_points / 2} pts</p>
+          <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{currentPreset.max_mandatory_points} <span className="text-xs text-slate-400 font-normal">pts</span></p>
+          <p className="text-[10px] text-slate-400 font-medium">Note minimale d'admission: {currentPreset.max_mandatory_points / 2} pts</p>
         </div>
 
-        <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl space-y-1">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-1 shadow-xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
-            <BookOpen className="w-3.5 h-3.5 text-blue-400" />
+            <BookOpen className="w-3.5 h-3.5 text-blue-500" />
             <span>Nombre d'Épreuves</span>
           </span>
-          <p className="text-2xl font-black text-white">{currentPreset.subjects.length}</p>
-          <p className="text-[10px] text-slate-500">
+          <p className="text-2xl font-black text-slate-900 dark:text-white">{currentPreset.subjects.length}</p>
+          <p className="text-[10px] text-slate-400 font-medium">
             {currentPreset.subjects.filter(s => s.is_mandatory).length} Obligatoires | {currentPreset.subjects.filter(s => s.is_bonus).length} Facultative(s)
           </p>
         </div>
 
-        <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl space-y-1">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-1 shadow-xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
-            <Award className="w-3.5 h-3.5 text-purple-400" />
+            <Award className="w-3.5 h-3.5 text-purple-500" />
             <span>Calcul Épreuves Bonus</span>
           </span>
-          <p className="text-xs font-bold text-purple-300 mt-1">Note &gt; 10/20 comptabilisée</p>
-          <p className="text-[10px] text-slate-500">Sans augmenter le dénominateur de coeff</p>
+          <p className="text-xs font-extrabold text-purple-700 dark:text-purple-300 mt-1">Note &gt; 10/20 comptabilisée</p>
+          <p className="text-[10px] text-slate-400 font-medium">Sans augmenter le dénominateur de coeff</p>
         </div>
       </div>
 
       {/* Detailed Subjects Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/40">
           <div className="flex items-center space-x-2">
-            <FileText className="w-4 h-4 text-brand-400" />
-            <h3 className="text-sm font-bold text-white">
+            <FileText className="w-4 h-4 text-brand-500" />
+            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
               Grille Officielle des Épreuves — {currentPreset.name}
             </h3>
           </div>
 
-          <span className="text-xs text-slate-400 font-mono">
+          <span className="text-xs text-slate-400 font-mono font-bold">
             Réf: DECO/MENA-{currentPreset.code}
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950/70 text-slate-400 uppercase text-[10px] tracking-wider font-bold border-b border-slate-800">
+          <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+            <thead className="bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-bold border-b border-slate-200 dark:border-slate-800">
               <tr>
                 <th className="px-4 py-3.5 text-center w-12">#</th>
                 <th className="px-4 py-3.5">Code Slug</th>
@@ -215,18 +215,18 @@ export const OfficialReferentialTab: React.FC<OfficialReferentialTabProps> = ({ 
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-800/60 font-sans">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
               {currentPreset.subjects.map((subj, idx) => (
-                <tr key={subj.code} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="px-4 py-3 text-center font-mono font-bold text-slate-500">
+                <tr key={subj.code} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                  <td className="px-4 py-3 text-center font-mono font-bold text-slate-400">
                     {subj.display_order || idx + 1}
                   </td>
 
-                  <td className="px-4 py-3 font-mono text-[11px] text-brand-400 font-semibold">
+                  <td className="px-4 py-3 font-mono text-[11px] text-brand-600 font-bold">
                     {subj.code}
                   </td>
 
-                  <td className="px-4 py-3 font-bold text-white">
+                  <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">
                     {subj.subject_name}
                   </td>
 
@@ -238,17 +238,17 @@ export const OfficialReferentialTab: React.FC<OfficialReferentialTabProps> = ({ 
 
                   <td className="px-4 py-3 text-center">
                     {subj.is_bonus ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
                         ⭐ Bonus / Optionnel
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
                         Obligatoire
                       </span>
                     )}
                   </td>
 
-                  <td className="px-4 py-3 text-center font-mono font-black text-white text-sm">
+                  <td className="px-4 py-3 text-center font-mono font-black text-slate-900 dark:text-white text-sm">
                     {subj.coefficient}
                   </td>
 
@@ -256,13 +256,13 @@ export const OfficialReferentialTab: React.FC<OfficialReferentialTabProps> = ({ 
                     /{subj.max_score}
                   </td>
 
-                  <td className="px-4 py-3 text-slate-400 text-[11px]">
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-[11px]">
                     {subj.is_bonus ? (
-                      <span className="text-amber-300 font-mono">
+                      <span className="text-amber-700 dark:text-amber-300 font-mono font-semibold">
                         Points = MAX(0, (Note - 10) × {subj.coefficient})
                       </span>
                     ) : (
-                      <span className="text-slate-300 font-mono">
+                      <span className="text-slate-700 dark:text-slate-300 font-mono">
                         Points = Note × {subj.coefficient}
                       </span>
                     )}
@@ -271,16 +271,16 @@ export const OfficialReferentialTab: React.FC<OfficialReferentialTabProps> = ({ 
               ))}
             </tbody>
 
-            <tfoot className="bg-slate-950/80 font-bold border-t border-slate-800 text-xs">
+            <tfoot className="bg-slate-50 dark:bg-slate-800/80 font-bold border-t border-slate-200 dark:border-slate-800 text-xs">
               <tr>
-                <td colSpan={5} className="px-4 py-3 text-right text-slate-400 uppercase tracking-wider text-[10px]">
+                <td colSpan={5} className="px-4 py-3 text-right text-slate-500 uppercase tracking-wider text-[10px]">
                   Total des Coefficients Obligatoires :
                 </td>
-                <td className="px-4 py-3 text-center font-mono text-amber-400 text-base font-black">
+                <td className="px-4 py-3 text-center font-mono text-amber-600 dark:text-amber-400 text-base font-black">
                   {currentPreset.total_mandatory_coefficients}
                 </td>
-                <td colSpan={2} className="px-4 py-3 text-left text-slate-400 text-[11px]">
-                  Total points max obligatoires : <strong className="text-white">{currentPreset.max_mandatory_points} pts</strong>
+                <td colSpan={2} className="px-4 py-3 text-left text-slate-600 dark:text-slate-300 text-[11px]">
+                  Total points max obligatoires : <strong className="text-slate-900 dark:text-white">{currentPreset.max_mandatory_points} pts</strong>
                 </td>
               </tr>
             </tfoot>

@@ -104,13 +104,13 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
     <div className="space-y-6">
       
       {/* Top Header & Exam Selector */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-extrabold text-white flex items-center space-x-2">
-            <Trophy className="w-5 h-5 text-amber-400" />
+          <h2 className="text-lg font-extrabold text-gray-900 dark:text-white flex items-center space-x-2">
+            <Trophy className="w-5 h-5 text-amber-500" />
             <span>Classements & Performances Multi-Niveaux</span>
           </h2>
-          <p className="text-xs text-slate-400">Palmarès officiel et analyse statistique de l'examen blanc</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Palmarès officiel et analyse statistique de l'examen blanc</p>
         </div>
 
         <div className="w-full md:w-auto">
@@ -120,7 +120,7 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
               const ex = exams.find(x => x.id === e.target.value);
               if (ex) onSelectExam(ex);
             }}
-            className="w-full md:w-80 px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs font-semibold focus:outline-none focus:border-brand-500"
+            className="w-full md:w-80 px-3.5 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-xs font-semibold outline-none focus:border-gray-500"
           >
             {exams.map(e => (
               <option key={e.id} value={e.id}>
@@ -133,52 +133,52 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
 
       {/* Analytics KPI Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center space-x-4 shadow-lg">
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-2xl flex items-center space-x-4 shadow-xs">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center font-bold">
             {successRate}%
           </div>
           <div>
-            <div className="text-[10px] text-slate-400 font-bold uppercase">Taux de Réussite</div>
-            <div className="text-lg font-extrabold text-white">{totalAdmis} / {totalCandidates} Admis</div>
+            <div className="text-[10px] text-gray-500 font-bold uppercase">Taux de Réussite</div>
+            <div className="text-lg font-extrabold text-gray-900 dark:text-white">{totalAdmis} / {totalCandidates} Admis</div>
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center space-x-4 shadow-lg">
-          <div className="w-12 h-12 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-2xl flex items-center space-x-4 shadow-xs">
+          <div className="w-12 h-12 rounded-xl bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 flex items-center justify-center font-bold">
             {globalAverage}
           </div>
           <div>
-            <div className="text-[10px] text-slate-400 font-bold uppercase">Moyenne Générale</div>
-            <div className="text-lg font-extrabold text-white">Moyenne Promotion</div>
+            <div className="text-[10px] text-gray-500 font-bold uppercase">Moyenne Générale</div>
+            <div className="text-lg font-extrabold text-gray-900 dark:text-white">Moyenne Promotion</div>
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center space-x-4 shadow-lg">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-2xl flex items-center space-x-4 shadow-xs">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 flex items-center justify-center font-bold">
             {maxAverage}
           </div>
           <div>
-            <div className="text-[10px] text-slate-400 font-bold uppercase">Plus Forte Moyenne</div>
-            <div className="text-lg font-extrabold text-amber-300">Major de Promo</div>
+            <div className="text-[10px] text-gray-500 font-bold uppercase">Plus Forte Moyenne</div>
+            <div className="text-lg font-extrabold text-amber-600 dark:text-amber-300">Major de Promo</div>
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center space-x-4 shadow-lg">
-          <div className="w-12 h-12 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-2xl flex items-center space-x-4 shadow-xs">
+          <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 flex items-center justify-center font-bold">
             {minAverage}
           </div>
           <div>
-            <div className="text-[10px] text-slate-400 font-bold uppercase">Moyenne Minimale</div>
-            <div className="text-lg font-extrabold text-rose-300">Seuil de Rattrapage</div>
+            <div className="text-[10px] text-gray-500 font-bold uppercase">Moyenne Minimale</div>
+            <div className="text-lg font-extrabold text-rose-600 dark:text-rose-300">Seuil de Rattrapage</div>
           </div>
         </div>
       </div>
 
       {/* Visual Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-          <h3 className="text-sm font-bold text-white flex items-center space-x-2">
-            <PieChart className="w-4 h-4 text-emerald-400" />
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-xs space-y-3">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+            <PieChart className="w-4 h-4 text-emerald-600" />
             <span>Répartition des Admis / Refusés</span>
           </h3>
           <div className="h-52">
@@ -195,18 +195,18 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-          <h3 className="text-sm font-bold text-white flex items-center space-x-2">
-            <BarChart2 className="w-4 h-4 text-brand-400" />
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-xs space-y-3">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+            <BarChart2 className="w-4 h-4 text-gray-700 dark:text-gray-300" />
             <span>Distribution des Mentions</span>
           </h3>
           <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData}>
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} />
-                <YAxis stroke="#94a3b8" fontSize={10} />
+                <XAxis dataKey="name" stroke="#6b7280" fontSize={10} />
+                <YAxis stroke="#6b7280" fontSize={10} />
                 <Tooltip />
-                <Bar dataKey="count" fill="#6366f1" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="count" fill="#374151" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -214,12 +214,12 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
       </div>
 
       {/* View Sub-Tabs Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-800 pb-3">
         <div className="flex items-center space-x-2 overflow-x-auto custom-scrollbar">
           <button
             onClick={() => setActiveSubTab('class')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeSubTab === 'class' ? 'bg-brand-500 text-white shadow-md' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+              activeSubTab === 'class' ? 'bg-gray-900 text-white shadow-md' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50'
             }`}
           >
             Par Classe
@@ -228,7 +228,7 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
           <button
             onClick={() => setActiveSubTab('level')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeSubTab === 'level' ? 'bg-brand-500 text-white shadow-md' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+              activeSubTab === 'level' ? 'bg-gray-900 text-white shadow-md' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50'
             }`}
           >
             Par Niveau Global
@@ -237,7 +237,7 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
           <button
             onClick={() => setActiveSubTab('school')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeSubTab === 'school' ? 'bg-brand-500 text-white shadow-md' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+              activeSubTab === 'school' ? 'bg-gray-900 text-white shadow-md' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50'
             }`}
           >
             Général Établissement (Top 50)
@@ -246,16 +246,16 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
           <button
             onClick={() => setActiveSubTab('cycle')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeSubTab === 'cycle' ? 'bg-brand-500 text-white shadow-md' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+              activeSubTab === 'cycle' ? 'bg-gray-900 text-white shadow-md' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50'
             }`}
           >
-            Par Cycle (1er / 2nd)
+            Par Cycle (1er & 2nd)
           </button>
 
           <button
             onClick={() => setActiveSubTab('series')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeSubTab === 'series' ? 'bg-brand-500 text-white shadow-md' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+              activeSubTab === 'series' ? 'bg-gray-800 text-white shadow-md' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50'
             }`}
           >
             Par Série (A, C, D)
@@ -264,13 +264,13 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
 
         {/* Search */}
         <div className="relative w-full sm:w-64">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
           <input
             type="text"
             placeholder="Rechercher rang élève..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none"
+            className="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white text-xs outline-none"
           />
         </div>
       </div>
@@ -278,11 +278,11 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
       {/* Class Selector when 'class' subtab is active */}
       {activeSubTab === 'class' && (
         <div className="flex items-center space-x-2">
-          <span className="text-xs font-bold text-slate-400">Filtrer Classe :</span>
+          <span className="text-xs font-bold text-gray-500">Filtrer Classe :</span>
           <select
             value={selectedClassFilter}
             onChange={(e) => setSelectedClassFilter(e.target.value)}
-            className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs font-semibold"
+            className="px-3 py-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white text-xs font-semibold"
           >
             <option value="all">Toutes les classes</option>
             {classesList.map(c => (
@@ -293,10 +293,10 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
       )}
 
       {/* Rankings Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950/80 text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-800">
+          <table className="w-full text-left text-xs text-gray-600 dark:text-gray-300">
+            <thead className="bg-gray-50 dark:bg-gray-950/80 text-gray-500 dark:text-gray-400 uppercase font-bold text-[10px] tracking-wider border-b border-gray-200 dark:border-gray-800">
               <tr>
                 <th className="py-3 px-4 text-center">Rang Classe</th>
                 <th className="py-3 px-4 text-center">Rang Niveau</th>
@@ -308,33 +308,33 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
                 <th className="py-3 px-4 text-center">Décision</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60">
               {displayedResults.map((res) => (
-                <tr key={res.id} className="hover:bg-slate-800/40 transition-colors">
+                <tr key={res.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
                   
                   <td className="py-3 px-4 text-center">
                     <div className="flex justify-center">{getRankMedal(res.rank)}</div>
                   </td>
 
-                  <td className="py-3 px-4 text-center font-bold text-slate-400">
+                  <td className="py-3 px-4 text-center font-bold text-gray-400">
                     N° {res.rank_level}
                   </td>
 
                   <td className="py-3 px-4">
-                    <div className="font-bold text-slate-100">{res.student_name}</div>
-                    <div className="text-[10px] text-slate-500 font-mono">{res.registration_number}</div>
+                    <div className="font-bold text-gray-900 dark:text-gray-100">{res.student_name}</div>
+                    <div className="text-[10px] text-gray-500 font-mono">{res.registration_number}</div>
                   </td>
 
-                  <td className="py-3 px-3 font-semibold text-amber-300">
+                  <td className="py-3 px-3 font-semibold text-amber-600 dark:text-amber-300">
                     {res.class_name}
                   </td>
 
-                  <td className="py-3 px-3 text-right font-mono text-slate-300">
+                  <td className="py-3 px-3 text-right font-mono text-gray-700 dark:text-gray-300">
                     {res.total_points} pts
                   </td>
 
                   <td className="py-3 px-4 text-center">
-                    <span className="text-base font-black text-emerald-400">
+                    <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
                       {res.average.toFixed(2)}
                     </span>
                   </td>
@@ -345,12 +345,12 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
 
                   <td className="py-3 px-4 text-center">
                     {res.result_status === 'ADMIS' ? (
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 inline-flex items-center space-x-1">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-500/30 inline-flex items-center space-x-1">
                         <CheckCircle2 className="w-3 h-3" />
                         <span>ADMIS</span>
                       </span>
                     ) : (
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 inline-flex items-center space-x-1">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-500/30 inline-flex items-center space-x-1">
                         <XCircle className="w-3 h-3" />
                         <span>REFUSÉ</span>
                       </span>

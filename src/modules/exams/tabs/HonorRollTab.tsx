@@ -56,28 +56,28 @@ export const HonorRollTab: React.FC<HonorRollTabProps> = ({ schoolId, onGenerate
     <div className="space-y-6">
       
       {/* Top Header & Config Launcher */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-extrabold text-white flex items-center space-x-2">
-            <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
+          <h2 className="text-lg font-extrabold text-gray-900 dark:text-white flex items-center space-x-2">
+            <Star className="w-5 h-5 text-amber-500 fill-amber-400" />
             <span>Moteur du Tableau d'Honneur Automatisé</span>
           </h2>
-          <p className="text-xs text-slate-400">Génération trimestrielle et annuelle basée sur les seuils configurés</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Génération trimestrielle et annuelle basée sur les seuils configurés</p>
         </div>
 
         <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
           <button
             onClick={() => setShowConfigModal(true)}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-colors border border-slate-700"
+            className="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold flex items-center space-x-2 transition-colors border border-gray-200 dark:border-gray-700"
           >
-            <Settings className="w-4 h-4 text-amber-400" />
+            <Settings className="w-4 h-4 text-amber-500" />
             <span>Configurer Seuils</span>
           </button>
 
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20 flex items-center space-x-2 disabled:opacity-50"
+            className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-2 disabled:opacity-50"
           >
             <Sparkles className="w-4 h-4" />
             <span>{generating ? 'Génération...' : 'Générer Tableau d\'Honneur'}</span>
@@ -88,12 +88,12 @@ export const HonorRollTab: React.FC<HonorRollTabProps> = ({ schoolId, onGenerate
       {/* Threshold Config Summary Pills */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {configs.map((cfg) => (
-          <div key={cfg.id} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-1">
-            <div className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">{cfg.title}</div>
-            <div className="text-lg font-black text-white">
+          <div key={cfg.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-2xl space-y-1 shadow-xs">
+            <div className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">{cfg.title}</div>
+            <div className="text-lg font-black text-gray-900 dark:text-white">
               Moyenne ≥ {cfg.min_average.toFixed(2)} / 20
             </div>
-            <div className="text-[10px] text-slate-400">
+            <div className="text-[10px] text-gray-400 font-medium">
               {cfg.max_average ? `Jusqu'à ${cfg.max_average.toFixed(2)}` : 'Jusqu\'à 20.00'}
             </div>
           </div>
@@ -103,12 +103,12 @@ export const HonorRollTab: React.FC<HonorRollTabProps> = ({ schoolId, onGenerate
       {/* Distinction Groups */}
       <div className="space-y-6">
         {Object.entries(groupedEntries).map(([distinction, items]) => (
-          <div key={distinction} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div key={distinction} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-4 shadow-xs">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
               <div className="flex items-center space-x-2">
-                <Award className="w-5 h-5 text-amber-400" />
-                <h3 className="text-base font-extrabold text-white">{distinction}</h3>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                <Award className="w-5 h-5 text-amber-500" />
+                <h3 className="text-base font-extrabold text-gray-900 dark:text-white">{distinction}</h3>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
                   {items.length} Récipiendaires
                 </span>
               </div>
@@ -116,16 +116,14 @@ export const HonorRollTab: React.FC<HonorRollTabProps> = ({ schoolId, onGenerate
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {items.map((entry) => (
-                <div key={entry.id} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div key={entry.id} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700/60 flex items-center justify-between">
                   <div className="space-y-1">
-                    <div className="font-bold text-white text-sm">{entry.student_name}</div>
-                    <div className="text-xs text-slate-400">{entry.class_name} • {entry.registration_number}</div>
-                    <div className="text-xs font-semibold text-emerald-400">Moyenne: {entry.average.toFixed(2)} / 20</div>
+                    <div className="font-extrabold text-gray-900 dark:text-white text-sm">{entry.student_name}</div>
+                    <div className="text-xs text-gray-500 font-medium">{entry.class_name} • <span className="font-mono text-gray-400">{entry.registration_number}</span></div>
                   </div>
                   <div className="text-right">
-                    <span className="w-8 h-8 rounded-full bg-brand-500/20 text-brand-300 font-black text-xs flex items-center justify-center border border-brand-500/30">
-                      N°{entry.rank}
-                    </span>
+                    <div className="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">{entry.average.toFixed(2)}</div>
+                    <div className="text-[10px] text-gray-400 font-bold">Rang #{entry.rank}</div>
                   </div>
                 </div>
               ))}

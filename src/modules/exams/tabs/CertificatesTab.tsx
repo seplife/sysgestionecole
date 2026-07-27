@@ -50,32 +50,32 @@ export const CertificatesTab: React.FC<CertificatesTabProps> = ({ schoolId, onOp
     <div className="space-y-6">
       
       {/* Top Header & Search */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-extrabold text-white flex items-center space-x-2">
-            <ShieldCheck className="w-5 h-5 text-amber-400" />
+          <h2 className="text-lg font-extrabold text-gray-900 dark:text-white flex items-center space-x-2">
+            <ShieldCheck className="w-5 h-5 text-amber-500" />
             <span>Registre des Certificats & Authenticité QR Code</span>
           </h2>
-          <p className="text-xs text-slate-400">Documents officiels infalsifiables avec clé de vérification publique</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Documents officiels infalsifiables avec clé de vérification publique</p>
         </div>
 
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
           <input
             type="text"
             placeholder="Rechercher par élève ou code QR..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-brand-500"
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-xs outline-none focus:border-gray-500"
           />
         </div>
       </div>
 
       {/* Certificates List Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950/80 text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-800">
+          <table className="w-full text-left text-xs text-gray-600 dark:text-gray-300">
+            <thead className="bg-gray-50 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 uppercase font-bold text-[10px] tracking-wider border-b border-gray-200 dark:border-gray-800">
               <tr>
                 <th className="py-3.5 px-4">N° Certificat</th>
                 <th className="py-3.5 px-4">Récipiendaire / Élève</th>
@@ -87,65 +87,61 @@ export const CertificatesTab: React.FC<CertificatesTabProps> = ({ schoolId, onOp
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60">
               {filteredCertificates.map((cert) => (
-                <tr key={cert.id} className="hover:bg-slate-800/40 transition-colors">
+                <tr key={cert.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition-colors">
                   
-                  <td className="py-3 px-4 font-mono font-bold text-amber-300">
+                  <td className="py-3 px-4 font-mono font-bold text-amber-600 dark:text-amber-400">
                     {cert.certificate_number}
                   </td>
 
                   <td className="py-3 px-4">
-                    <div className="font-bold text-slate-100">{cert.student_name}</div>
-                    <div className="text-[10px] text-slate-500 font-mono">{cert.registration_number}</div>
+                    <div className="font-extrabold text-gray-900 dark:text-gray-100">{cert.student_name}</div>
+                    <div className="text-[10px] text-gray-400 font-mono">{cert.registration_number}</div>
                   </td>
 
-                  <td className="py-3 px-3 font-semibold text-slate-300">
+                  <td className="py-3 px-3 font-semibold text-gray-500">
                     {cert.class_name}
                   </td>
 
-                  <td className="py-3 px-4 font-medium text-slate-200">
+                  <td className="py-3 px-4 font-semibold text-gray-900 dark:text-white">
                     {cert.title}
                   </td>
 
-                  <td className="py-3 px-3 text-center font-bold text-emerald-400">
-                    {cert.average ? `${cert.average.toFixed(2)} / 20` : 'N/A'}
+                  <td className="py-3 px-3 text-center font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                    {cert.average ? `${cert.average.toFixed(2)}/20` : '—'}
                   </td>
 
-                  <td className="py-3 px-3 text-center font-bold text-brand-300">
-                    {cert.rank ? `${cert.rank}e` : 'N/A'}
+                  <td className="py-3 px-3 text-center font-bold text-gray-600 dark:text-gray-300">
+                    {cert.rank ? `#${cert.rank}` : '—'}
                   </td>
 
                   <td className="py-3 px-4">
                     <div className="flex items-center space-x-2">
-                      <QrCode className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span className="font-mono text-[10px] text-slate-400 truncate max-w-[130px]">
-                        {cert.verification_code}
-                      </span>
+                      <QrCode className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span className="font-mono text-[11px] text-gray-600 dark:text-gray-300 font-bold">{cert.verification_code}</span>
+                      <button
+                        onClick={() => handleCopyLink(cert.verification_code)}
+                        className="text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors"
+                        title="Copier le lien d'authenticité public"
+                      >
+                        {copiedCode === cert.verification_code ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
                     </div>
                   </td>
 
                   <td className="py-3 px-4 text-right">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button
-                        onClick={() => handleCopyLink(cert.verification_code)}
-                        title="Copier le lien public de vérification"
-                        className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors flex items-center space-x-1"
-                      >
-                        <Copy className="w-3.5 h-3.5 text-amber-400" />
-                        {copiedCode === cert.verification_code && (
-                          <span className="text-[10px] text-emerald-400 font-bold">Copié!</span>
-                        )}
-                      </button>
-
-                      <button
-                        onClick={() => onOpenCertificateModal(cert)}
-                        className="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-lg text-xs transition-colors flex items-center space-x-1.5 shadow-xs"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Aperçu PDF</span>
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => onOpenCertificateModal(cert)}
+                      className="px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded-lg transition-colors flex items-center space-x-1 ml-auto text-xs shadow-xs"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Imprimer PDF</span>
+                    </button>
                   </td>
 
                 </tr>

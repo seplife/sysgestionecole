@@ -226,7 +226,7 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
     <div className="space-y-6">
       
       {/* Selector & Action Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
         
         {/* Exam Select Dropdown */}
         <div className="w-full md:w-auto flex-1 max-w-md">
@@ -240,7 +240,7 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
                 const ex = exams.find(x => x.id === e.target.value);
                 if (ex) onSelectExam(ex);
               }}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm font-semibold focus:outline-none focus:border-brand-500"
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm font-semibold outline-none focus:border-brand-500"
             >
               {exams.map(e => (
                 <option key={e.id} value={e.id}>
@@ -255,18 +255,18 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
                 title={selectedExam.status === 'in_progress' ? 'Désactiver / Verrouiller la Saisie' : 'Activer la Saisie des Notes'}
                 className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 border ${
                   selectedExam.status === 'in_progress'
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
-                    : 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                    : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
                 }`}
               >
                 {selectedExam.status === 'in_progress' ? (
                   <>
-                    <Unlock className="w-4 h-4 text-emerald-400" />
+                    <Unlock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>Saisie Active</span>
                   </>
                 ) : (
                   <>
-                    <Lock className="w-4 h-4 text-amber-400" />
+                    <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     <span>Activer Saisie</span>
                   </>
                 )}
@@ -281,15 +281,15 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
           <button
             onClick={handleFillSampleScores}
             disabled={!selectedExam || subjects.length === 0}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-purple-300 rounded-xl text-xs font-semibold transition-colors flex items-center space-x-2 border border-purple-500/20 disabled:opacity-50"
+            className="px-3.5 py-2 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 rounded-xl text-xs font-bold transition-colors flex items-center space-x-2 border border-purple-200 dark:border-purple-800 disabled:opacity-50"
             title="Pré-remplir la grille avec des notes de démonstration"
           >
-            <Sparkles className="w-4 h-4 text-purple-400" />
+            <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             <span>Simulation Notes</span>
           </button>
 
-          <label className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-xl text-xs font-semibold cursor-pointer transition-colors flex items-center space-x-2 border border-amber-500/20">
-            <Upload className="w-4 h-4" />
+          <label className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 rounded-xl text-xs font-bold cursor-pointer transition-colors flex items-center space-x-2 border border-amber-200 dark:border-amber-800">
+            <Upload className="w-4 h-4 text-amber-600" />
             <span>Importer Excel</span>
             <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
           </label>
@@ -297,7 +297,7 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
           <button
             onClick={handleSaveGrades}
             disabled={saving || !selectedExam}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-2 disabled:opacity-50"
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-2 disabled:opacity-50"
           >
             <Save className="w-4 h-4 text-emerald-400" />
             <span>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</span>
@@ -306,7 +306,7 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
           <button
             onClick={handleCalculate}
             disabled={calculating || !selectedExam}
-            className="px-5 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20 flex items-center space-x-2 disabled:opacity-50"
+            className="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-2 disabled:opacity-50"
           >
             <Calculator className="w-4 h-4" />
             <span>{calculating ? 'Calcul en cours...' : 'Calculer Moyennes'}</span>
@@ -317,27 +317,27 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
 
       {/* Zero subjects warning & quick activation */}
       {selectedExam && subjects.length === 0 && (
-        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-3">
-          <div className="flex items-center space-x-2 text-amber-300 font-bold text-xs">
-            <AlertCircle className="w-4 h-4 text-red shrink-0" />
+        <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl space-y-3">
+          <div className="flex items-center space-x-2 text-amber-800 dark:text-amber-300 font-bold text-xs">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>Aucune épreuve configurée pour cet examen. Chargez un barème officiel pour activer immédiatement la grille de saisie :</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => handleQuickLoadPreset('SERIE_A')}
-              className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-black border border-purple-500/40 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+              className="px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
             >
               <span>📖 Activer Barème BAC A (Littéraire - Coeff 20)</span>
             </button>
             <button
               onClick={() => handleQuickLoadPreset('SERIE_D')}
-              className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-black border border-blue-500/40 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+              className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-300 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
             >
               <span>🧪 Activer Barème BAC D (Scientifique - Coeff 20)</span>
             </button>
             <button
               onClick={() => handleQuickLoadPreset('BEPC_GEN')}
-              className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-black border border-emerald-500/40 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+              className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
             >
               <span>🎓 Activer Barème BEPC Général (Coeff 18)</span>
             </button>
@@ -346,8 +346,8 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
       )}
 
       {savedSuccess && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-emerald-300 text-xs font-semibold flex items-center space-x-2 animate-fade-in">
-          <CheckCircle2 className="w-4 h-4" />
+        <div className="bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 text-xs font-semibold flex items-center space-x-2 animate-fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           <span>Saisie des notes enregistrée avec succès.</span>
         </div>
       )}
@@ -360,7 +360,7 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
             <button
               onClick={() => setSelectedClass('all')}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                selectedClass === 'all' ? 'bg-brand-500 text-white' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                selectedClass === 'all' ? 'bg-brand-600 text-white' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
               }`}
             >
               Toutes ({candidates.length})
@@ -370,7 +370,7 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
                 key={cls}
                 onClick={() => setSelectedClass(cls)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                  selectedClass === cls ? 'bg-brand-500 text-white' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                  selectedClass === cls ? 'bg-brand-600 text-white' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
                 }`}
               >
                 {cls}
@@ -386,42 +386,42 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
             placeholder="Chercher élève..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none"
+            className="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-xs outline-none focus:border-brand-500"
           />
         </div>
       </div>
 
       {/* Matrix Grade Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950/80 text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-800">
+          <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+            <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th className="py-3 px-4 min-w-[200px] sticky left-0 bg-slate-950 z-10 border-r border-slate-800">
+                <th className="py-3 px-4 min-w-[200px] sticky left-0 bg-slate-50 dark:bg-slate-800 z-10 border-r border-slate-200 dark:border-slate-700">
                   Candidat / Élève
                 </th>
                 <th className="py-3 px-3">Classe</th>
                 {subjects.map(subj => (
                   <th key={subj.id} className="py-3 px-3 text-center min-w-[120px]">
                     <div>{subj.subject_name || subj.subject_id}</div>
-                    <div className="text-[9px] text-brand-400 font-normal">
+                    <div className="text-[9px] text-brand-600 dark:text-brand-400 font-bold">
                       Coeff {subj.coefficient} {subj.is_optional && '(Option)'}
                     </div>
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredCandidates.map((cand) => (
-                <tr key={cand.id} className="hover:bg-slate-800/40 transition-colors">
+                <tr key={cand.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                   
                   {/* Candidate Name & Registration */}
-                  <td className="py-2.5 px-4 font-medium text-white sticky left-0 bg-slate-900 border-r border-slate-800/80">
-                    <div className="font-bold text-slate-100">{cand.student_name}</div>
-                    <div className="text-[10px] text-slate-500 font-mono">{cand.registration_number}</div>
+                  <td className="py-2.5 px-4 font-medium text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+                    <div className="font-extrabold text-slate-900 dark:text-slate-100">{cand.student_name}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">{cand.registration_number}</div>
                   </td>
 
-                  <td className="py-2.5 px-3 font-semibold text-slate-400">
+                  <td className="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">
                     {cand.class_name}
                   </td>
 
@@ -442,11 +442,11 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
                             placeholder="--"
                             value={gr.score !== null && gr.score !== undefined ? gr.score : ''}
                             onChange={(e) => handleScoreChange(cand.student_id, subj.subject_id, e.target.value)}
-                            className={`w-16 px-2 py-1.5 bg-slate-950 border rounded-lg text-center font-semibold text-xs focus:outline-none transition-colors ${
+                            className={`w-16 px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border rounded-lg text-center font-bold text-xs outline-none transition-colors ${
                               gr.is_absent 
-                                ? 'border-rose-500/40 bg-rose-500/10 text-rose-400 line-through' 
+                                ? 'border-rose-300 dark:border-rose-500/40 bg-rose-50 dark:bg-rose-500/10 text-rose-600 line-through' 
                                 : gr.score !== null && gr.score >= 10 
-                                ? 'border-slate-800 text-emerald-400 focus:border-emerald-500' 
+                                ? 'border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-400 focus:border-emerald-500' 
                                 : gr.score !== null 
                                 ? 'border-slate-800 text-rose-400 focus:border-rose-500' 
                                 : 'border-slate-800 text-white focus:border-brand-500'
