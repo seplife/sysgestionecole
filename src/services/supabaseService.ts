@@ -26,9 +26,11 @@ export const sanitizeSchoolForDb = (school: any) => ({
   motto: school.motto || 'Foi, Discipline, Excellence',
   address: school.address || null,
   city: school.city || 'Abidjan',
+  country: school.country || 'Côte d\'Ivoire',
   phone: school.phone || null,
   whatsapp: school.whatsapp || null,
   email: school.email || null,
+  website: school.website || null,
   director_name: school.director_name || null,
   logo_url: school.logo_url || null,
   school_type: ['Public', 'Prive', 'Confessionnel'].includes(school.school_type) ? school.school_type : 'Prive',
@@ -38,12 +40,13 @@ export const sanitizeSchoolForDb = (school: any) => ({
 export const sanitizeStudentForDb = (student: any) => ({
   id: toValidUuid(student.id),
   school_id: toValidUuid(student.school_id || 'school-palmeraie-01'),
+  class_id: toValidUuid(student.class_id || 'cls-3eme-2'),
   registration_number: student.registration_number || `REG-${Date.now()}`,
   first_name: student.first_name || '',
   last_name: student.last_name || '',
-  date_of_birth: student.date_of_birth || null,
+  date_of_birth: student.date_of_birth && student.date_of_birth.trim() !== '' ? student.date_of_birth : null,
   place_of_birth: student.place_of_birth || null,
-  gender: student.gender || 'M',
+  gender: ['M', 'F'].includes(student.gender) ? student.gender : 'M',
   nationality: student.nationality || 'Ivoirienne',
   blood_group: student.blood_group || null,
   status: student.status || 'Inscrit',
@@ -58,7 +61,7 @@ export const sanitizeClassForDb = (cls: any) => ({
   level: cls.level || 'Collège',
   section: cls.section || null,
   room_number: cls.room_number || null,
-  max_capacity: cls.max_capacity || 50
+  max_capacity: Number(cls.max_capacity) || 50
 });
 
 export const sanitizeSubjectForDb = (sbj: any) => ({
@@ -67,20 +70,44 @@ export const sanitizeSubjectForDb = (sbj: any) => ({
   code: sbj.code || 'MAT',
   name: sbj.name || 'Matière',
   category: sbj.category || 'Général',
-  coefficient: Number(sbj.coefficient) || 1
+  coefficient: Number(sbj.coefficient) || 1,
+  description: sbj.description || null
 });
 
 export const sanitizePaymentForDb = (p: any) => ({
   id: toValidUuid(p.id),
   school_id: toValidUuid(p.school_id || 'school-palmeraie-01'),
-  receipt_number: p.receipt_number || `REC-${Date.now()}`,
-  student_name: p.student_name || 'Élève',
+  student_id: toValidUuid(p.student_id || 'std-001'),
   amount: Number(p.amount) || 0,
-  payment_method: p.payment_method || 'Espèces',
-  transaction_id: p.transaction_id || null,
-  payer_phone: p.payer_phone || null,
-  payer_name: p.payer_name || null,
-  status: p.status || 'Succès'
+  currency: 'XOF',
+  payment_method: ['cash', 'mobile_money', 'bank_transfer', 'check'].includes(p.payment_method)
+    ? p.payment_method
+    : 'mobile_money',
+  reference: p.transaction_id || p.receipt_number || `REF-${Date.now()}`,
+  status: p.status === 'Succès' ? 'completed' : 'pending',
+  description: p.student_name ? `Paiement de ${p.student_name}` : 'Paiement scolarité'
+});
+
+export const sanitizeParentForDb = (prt: any) => ({
+  id: toValidUuid(prt.id),
+  school_id: toValidUuid(prt.school_id || 'school-palmeraie-01'),
+  first_name: prt.first_name || '',
+  last_name: prt.last_name || '',
+  phone: prt.phone || null,
+  whatsapp: prt.whatsapp || null,
+  email: prt.email || null,
+  profession: prt.profession || null,
+  address: prt.address || null
+});
+
+export const sanitizeUserProfileForDb = (usr: any) => ({
+  id: toValidUuid(usr.id),
+  first_name: usr.first_name || '',
+  last_name: usr.last_name || '',
+  email: usr.email || `${toValidUuid(usr.id)}@saintviateur.ci`,
+  phone: usr.phone || null,
+  avatar_url: usr.avatar_url || null,
+  role: usr.role || 'enseignant'
 });
 
 // Initial default seeds used ONLY on first setup if Supabase & LocalStorage are completely empty
@@ -525,9 +552,11 @@ export const supabaseService = {
     setLocalCache('parents', updated);
 
     try {
-      await supabase.from('parents').upsert(parent);
+      const dbPayload = sanitizeParentForDb(parent);
+      const { error } = await supabase.from('parents').upsert(dbPayload);
+      if (error) console.error('[Supabase Parent Sync Error]:', error);
     } catch (e) {
-      console.warn('[Supabase Parent Sync Error]:', e);
+      console.error('[Supabase Parent Sync Exception]:', e);
     }
     return updated;
   },
@@ -538,9 +567,11 @@ export const supabaseService = {
     setLocalCache('parents', updated);
 
     try {
-      await supabase.from('parents').delete().eq('id', id);
+      const targetId = toValidUuid(id);
+      const { error } = await supabase.from('parents').delete().eq('id', targetId);
+      if (error) console.error('[Supabase Delete Parent Error]:', error);
     } catch (e) {
-      console.warn('[Supabase Delete Parent Error]:', e);
+      console.error('[Supabase Delete Parent Exception]:', e);
     }
     return updated;
   },
@@ -571,9 +602,11 @@ export const supabaseService = {
     setLocalCache('staff', updated);
 
     try {
-      await supabase.from('user_profiles').upsert(staff);
+      const dbPayload = sanitizeUserProfileForDb(staff);
+      const { error } = await supabase.from('user_profiles').upsert(dbPayload);
+      if (error) console.error('[Supabase Staff Sync Error]:', error);
     } catch (e) {
-      console.warn('[Supabase Staff Sync Error]:', e);
+      console.error('[Supabase Staff Sync Exception]:', e);
     }
     return updated;
   },
@@ -584,9 +617,11 @@ export const supabaseService = {
     setLocalCache('staff', updated);
 
     try {
-      await supabase.from('user_profiles').delete().eq('id', id);
+      const targetId = toValidUuid(id);
+      const { error } = await supabase.from('user_profiles').delete().eq('id', targetId);
+      if (error) console.error('[Supabase Delete Staff Error]:', error);
     } catch (e) {
-      console.warn('[Supabase Delete Staff Error]:', e);
+      console.error('[Supabase Delete Staff Exception]:', e);
     }
     return updated;
   },

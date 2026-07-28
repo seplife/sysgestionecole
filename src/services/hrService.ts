@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { getLocalCache, setLocalCache } from './supabaseService';
+import { getLocalCache, setLocalCache, toValidUuid } from './supabaseService';
 import { Department, ServiceUnit, Position, Employee, EmployeeContract, EmployeeAttendance, LeaveType, LeaveRequest } from '../types';
 
 // Initial seeds for demo/offline
@@ -174,7 +174,12 @@ export const hrService = {
     }
     setLocalCache('hr_employees', updated);
     try {
-      await supabase.from('employees').upsert(employee);
+      const payload = {
+        ...employee,
+        id: toValidUuid(employee.id),
+        school_id: toValidUuid(employee.school_id || 'school-palmeraie-01')
+      };
+      await supabase.from('employees').upsert(payload);
     } catch (e) {
       console.warn('[Supabase saveEmployee Exception]:', e);
     }
@@ -186,7 +191,8 @@ export const hrService = {
     const updated = current.filter(e => e.id !== id);
     setLocalCache('hr_employees', updated);
     try {
-      await supabase.from('employees').delete().eq('id', id);
+      const targetId = toValidUuid(id);
+      await supabase.from('employees').delete().eq('id', targetId);
     } catch (e) {
       console.warn('[Supabase deleteEmployee Exception]:', e);
     }

@@ -1,7 +1,8 @@
 -- ============================================================
 -- SYSTÈME DE GESTION D'ÉCOLE "IVOIREÉCOLE+"
 -- Base de données Supabase complète
--- Version: 1.0.0
+-- Version: 2.0.3
+-- Date: 2026-07-28
 -- ============================================================
 
 -- ============================================================
@@ -15,7 +16,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- 02_schools.sql - Table des écoles
 -- ============================================================
 
-CREATE TABLE public.schools (
+CREATE TABLE IF NOT EXISTS public.schools (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
@@ -56,7 +57,7 @@ CREATE TABLE public.schools (
 -- 03_plans.sql - Plans d'abonnement
 -- ============================================================
 
-CREATE TABLE public.plans (
+CREATE TABLE IF NOT EXISTS public.plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
     slug VARCHAR(100) UNIQUE NOT NULL,
@@ -65,9 +66,9 @@ CREATE TABLE public.plans (
     currency VARCHAR(3) DEFAULT 'XOF',
     billing_interval VARCHAR(20) DEFAULT 'monthly'
         CHECK (billing_interval IN ('monthly', 'yearly')),
-    max_students INTEGER, -- NULL = illimité
-    max_teachers INTEGER, -- NULL = illimité
-    max_users INTEGER, -- NULL = illimité
+    max_students INTEGER,
+    max_teachers INTEGER,
+    max_users INTEGER,
     features JSONB DEFAULT '{}'::jsonb,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -77,7 +78,7 @@ CREATE TABLE public.plans (
 -- 04_subscriptions.sql - Abonnements
 -- ============================================================
 
-CREATE TABLE public.subscriptions (
+CREATE TABLE IF NOT EXISTS public.subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -105,7 +106,7 @@ CREATE TABLE public.subscriptions (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Index pour éviter plusieurs abonnements actifs
+DROP INDEX IF EXISTS unique_active_subscription;
 CREATE UNIQUE INDEX unique_active_subscription
 ON public.subscriptions(school_id)
 WHERE status IN ('trialing', 'active');
@@ -114,7 +115,7 @@ WHERE status IN ('trialing', 'active');
 -- 05_users_profiles.sql - Profils utilisateurs
 -- ============================================================
 
-CREATE TABLE public.user_profiles (
+CREATE TABLE IF NOT EXISTS public.user_profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
@@ -131,7 +132,7 @@ CREATE TABLE public.user_profiles (
 -- 06_school_members.sql - Membres des écoles
 -- ============================================================
 
-CREATE TABLE public.school_members (
+CREATE TABLE IF NOT EXISTS public.school_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -168,7 +169,7 @@ CREATE TABLE public.school_members (
 -- 07_permissions.sql - Gestion des permissions
 -- ============================================================
 
-CREATE TABLE public.permissions (
+CREATE TABLE IF NOT EXISTS public.permissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR(100) UNIQUE NOT NULL,
     name VARCHAR(150) NOT NULL,
@@ -176,7 +177,7 @@ CREATE TABLE public.permissions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE public.role_permissions (
+CREATE TABLE IF NOT EXISTS public.role_permissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     role VARCHAR(50) NOT NULL,
     permission_id UUID NOT NULL
@@ -190,8 +191,7 @@ CREATE TABLE public.role_permissions (
 -- 08_academic_structure.sql - Structure académique
 -- ============================================================
 
--- Années scolaires
-CREATE TABLE public.academic_years (
+CREATE TABLE IF NOT EXISTS public.academic_years (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -204,8 +204,7 @@ CREATE TABLE public.academic_years (
     UNIQUE(school_id, name)
 );
 
--- Trimestres
-CREATE TABLE public.academic_terms (
+CREATE TABLE IF NOT EXISTS public.academic_terms (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -219,8 +218,7 @@ CREATE TABLE public.academic_terms (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Classes
-CREATE TABLE public.classes (
+CREATE TABLE IF NOT EXISTS public.classes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -235,8 +233,7 @@ CREATE TABLE public.classes (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Matières
-CREATE TABLE public.subjects (
+CREATE TABLE IF NOT EXISTS public.subjects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -248,8 +245,7 @@ CREATE TABLE public.subjects (
     UNIQUE(school_id, name)
 );
 
--- Classes - Matières
-CREATE TABLE public.class_subjects (
+CREATE TABLE IF NOT EXISTS public.class_subjects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     class_id UUID NOT NULL
         REFERENCES public.classes(id)
@@ -267,8 +263,7 @@ CREATE TABLE public.class_subjects (
 -- 09_students_parents.sql - Élèves et parents
 -- ============================================================
 
--- Élèves
-CREATE TABLE public.students (
+CREATE TABLE IF NOT EXISTS public.students (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -300,8 +295,7 @@ CREATE TABLE public.students (
     UNIQUE(school_id, registration_number)
 );
 
--- Parents
-CREATE TABLE public.parents (
+CREATE TABLE IF NOT EXISTS public.parents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -318,8 +312,7 @@ CREATE TABLE public.parents (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Relations élèves-parents
-CREATE TABLE public.student_guardians (
+CREATE TABLE IF NOT EXISTS public.student_guardians (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -336,8 +329,7 @@ CREATE TABLE public.student_guardians (
     UNIQUE(student_id, parent_id)
 );
 
--- Inscriptions
-CREATE TABLE public.enrollments (
+CREATE TABLE IF NOT EXISTS public.enrollments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -362,7 +354,7 @@ CREATE TABLE public.enrollments (
 -- 10_teachers.sql - Enseignants
 -- ============================================================
 
-CREATE TABLE public.teachers (
+CREATE TABLE IF NOT EXISTS public.teachers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -386,7 +378,7 @@ CREATE TABLE public.teachers (
 -- 11_attendance.sql - Présences
 -- ============================================================
 
-CREATE TABLE public.attendance_records (
+CREATE TABLE IF NOT EXISTS public.attendance_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -413,8 +405,7 @@ CREATE TABLE public.attendance_records (
 -- 12_assessments_grades.sql - Évaluations et notes
 -- ============================================================
 
--- Évaluations
-CREATE TABLE public.assessments (
+CREATE TABLE IF NOT EXISTS public.assessments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -434,8 +425,7 @@ CREATE TABLE public.assessments (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Notes
-CREATE TABLE public.grades (
+CREATE TABLE IF NOT EXISTS public.grades (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -457,7 +447,7 @@ CREATE TABLE public.grades (
 -- 13_report_cards.sql - Bulletins
 -- ============================================================
 
-CREATE TABLE public.report_cards (
+CREATE TABLE IF NOT EXISTS public.report_cards (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -486,8 +476,7 @@ CREATE TABLE public.report_cards (
 -- 14_finance.sql - Finance
 -- ============================================================
 
--- Types de frais
-CREATE TABLE public.fee_types (
+CREATE TABLE IF NOT EXISTS public.fee_types (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -502,8 +491,7 @@ CREATE TABLE public.fee_types (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Transactions
-CREATE TABLE public.payment_transactions (
+CREATE TABLE IF NOT EXISTS public.payment_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -532,8 +520,7 @@ CREATE TABLE public.payment_transactions (
 -- 15_communication.sql - Communication
 -- ============================================================
 
--- Messages
-CREATE TABLE public.messages (
+CREATE TABLE IF NOT EXISTS public.messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL
         REFERENCES public.schools(id)
@@ -550,8 +537,7 @@ CREATE TABLE public.messages (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Destinataires des messages
-CREATE TABLE public.message_recipients (
+CREATE TABLE IF NOT EXISTS public.message_recipients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     message_id UUID NOT NULL
         REFERENCES public.messages(id)
@@ -567,7 +553,7 @@ CREATE TABLE public.message_recipients (
 -- 16_notifications.sql - Notifications
 -- ============================================================
 
-CREATE TABLE public.notifications (
+CREATE TABLE IF NOT EXISTS public.notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL
         REFERENCES auth.users(id)
@@ -585,7 +571,7 @@ CREATE TABLE public.notifications (
 -- 17_audit.sql - Journal d'audit
 -- ============================================================
 
-CREATE TABLE public.audit_logs (
+CREATE TABLE IF NOT EXISTS public.audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID
         REFERENCES public.schools(id)
@@ -616,8 +602,8 @@ AS $$
     SELECT auth.uid();
 $$;
 
--- Vérifier si l'utilisateur est super_admin
-CREATE OR REPLACE FUNCTION public.is_super_admin(user_id UUID DEFAULT NULL)
+-- Vérifier si l'utilisateur est super_admin (sans paramètre - utilise auth.uid())
+CREATE OR REPLACE FUNCTION public.is_super_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
@@ -625,29 +611,118 @@ AS $$
     SELECT EXISTS (
         SELECT 1
         FROM public.school_members
-        WHERE user_id = COALESCE($1, auth.uid())
+        WHERE user_id = auth.uid()
         AND role = 'super_admin'
         AND is_active = true
     );
 $$;
 
--- Récupérer les écoles d'un utilisateur
-CREATE OR REPLACE FUNCTION public.get_user_schools(user_id UUID DEFAULT NULL)
+-- Vérifier si un utilisateur spécifique est super_admin (avec paramètre)
+CREATE OR REPLACE FUNCTION public.is_super_admin(user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM public.school_members
+        WHERE user_id = $1
+        AND role = 'super_admin'
+        AND is_active = true
+    );
+$$;
+
+-- Récupérer les écoles d'un utilisateur (avec paramètre)
+CREATE OR REPLACE FUNCTION public.get_user_schools(user_id UUID)
 RETURNS TABLE(school_id UUID, role VARCHAR)
 LANGUAGE sql
 STABLE
 AS $$
     SELECT school_id, role
     FROM public.school_members
-    WHERE user_id = COALESCE($1, auth.uid())
+    WHERE user_id = $1
     AND is_active = true;
 $$;
 
--- Vérifier si un utilisateur a une permission
+-- Récupérer les écoles de l'utilisateur actuel (sans paramètre)
+CREATE OR REPLACE FUNCTION public.get_user_schools()
+RETURNS TABLE(school_id UUID, role VARCHAR)
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT school_id, role
+    FROM public.school_members
+    WHERE user_id = auth.uid()
+    AND is_active = true;
+$$;
+
+-- Vérifier si un utilisateur a une permission (3 paramètres complets)
 CREATE OR REPLACE FUNCTION public.has_permission(
     permission_code VARCHAR,
-    user_id UUID DEFAULT NULL,
-    school_id UUID DEFAULT NULL
+    user_id UUID,
+    school_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+    v_has_perm BOOLEAN;
+BEGIN
+    -- Super admin a tous les droits
+    IF public.is_super_admin(user_id) THEN
+        RETURN TRUE;
+    END IF;
+    
+    SELECT EXISTS (
+        SELECT 1
+        FROM public.school_members sm
+        JOIN public.role_permissions rp ON rp.role = sm.role
+        JOIN public.permissions p ON p.id = rp.permission_id
+        WHERE sm.user_id = user_id
+        AND sm.school_id = school_id
+        AND sm.is_active = true
+        AND p.code = permission_code
+    ) INTO v_has_perm;
+    
+    RETURN COALESCE(v_has_perm, FALSE);
+END;
+$$;
+
+-- Vérifier si un utilisateur a une permission (2 paramètres: permission et user_id)
+CREATE OR REPLACE FUNCTION public.has_permission(
+    permission_code VARCHAR,
+    user_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+    v_has_perm BOOLEAN;
+BEGIN
+    -- Super admin a tous les droits
+    IF public.is_super_admin(user_id) THEN
+        RETURN TRUE;
+    END IF;
+    
+    SELECT EXISTS (
+        SELECT 1
+        FROM public.school_members sm
+        JOIN public.role_permissions rp ON rp.role = sm.role
+        JOIN public.permissions p ON p.id = rp.permission_id
+        WHERE sm.user_id = user_id
+        AND sm.is_active = true
+        AND p.code = permission_code
+    ) INTO v_has_perm;
+    
+    RETURN COALESCE(v_has_perm, FALSE);
+END;
+$$;
+
+-- Vérifier si l'utilisateur actuel a une permission (1 paramètre)
+CREATE OR REPLACE FUNCTION public.has_permission(
+    permission_code VARCHAR
 )
 RETURNS BOOLEAN
 LANGUAGE plpgsql
@@ -655,76 +730,73 @@ STABLE
 AS $$
 DECLARE
     v_user_id UUID;
-    v_school_id UUID;
     v_has_perm BOOLEAN;
 BEGIN
-    v_user_id := COALESCE($2, auth.uid());
+    v_user_id := auth.uid();
     
     -- Super admin a tous les droits
     IF public.is_super_admin(v_user_id) THEN
         RETURN TRUE;
     END IF;
     
-    -- Si school_id n'est pas fourni, vérifier dans n'importe quelle école
-    IF $3 IS NULL THEN
-        SELECT EXISTS (
-            SELECT 1
-            FROM public.school_members sm
-            JOIN public.role_permissions rp ON rp.role = sm.role
-            JOIN public.permissions p ON p.id = rp.permission_id
-            WHERE sm.user_id = v_user_id
-            AND sm.is_active = true
-            AND p.code = $1
-        ) INTO v_has_perm;
-    ELSE
-        SELECT EXISTS (
-            SELECT 1
-            FROM public.school_members sm
-            JOIN public.role_permissions rp ON rp.role = sm.role
-            JOIN public.permissions p ON p.id = rp.permission_id
-            WHERE sm.user_id = v_user_id
-            AND sm.school_id = $3
-            AND sm.is_active = true
-            AND p.code = $1
-        ) INTO v_has_perm;
-    END IF;
+    SELECT EXISTS (
+        SELECT 1
+        FROM public.school_members sm
+        JOIN public.role_permissions rp ON rp.role = sm.role
+        JOIN public.permissions p ON p.id = rp.permission_id
+        WHERE sm.user_id = v_user_id
+        AND sm.is_active = true
+        AND p.code = permission_code
+    ) INTO v_has_perm;
     
     RETURN COALESCE(v_has_perm, FALSE);
 END;
 $$;
 
 -- ============================================================
--- 19_rls_policies.sql - Politiques RLS
+-- 19_rls_policies.sql - Politiques RLS (CORRIGÉES)
 -- ============================================================
 
 -- Activer RLS sur toutes les tables
-ALTER TABLE public.schools ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.school_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.academic_years ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.academic_terms ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.classes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.subjects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.class_subjects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.parents ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.student_guardians ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.teachers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.attendance_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.assessments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.grades ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.report_cards ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.fee_types ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.message_recipients ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.schools ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.school_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.role_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.academic_years ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.academic_terms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.classes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.subjects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.class_subjects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.parents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.student_guardians ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.enrollments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.teachers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.attendance_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.assessments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.grades ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.report_cards ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.fee_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.payment_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.message_recipients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- Supprimer les politiques existantes pour éviter les conflits
+DROP POLICY IF EXISTS "users_view_their_schools" ON public.schools;
+DROP POLICY IF EXISTS "admins_manage_their_schools" ON public.schools;
+DROP POLICY IF EXISTS "members_view_their_school_members" ON public.school_members;
+DROP POLICY IF EXISTS "school_members_view_students" ON public.students;
+DROP POLICY IF EXISTS "educators_manage_students" ON public.students;
+DROP POLICY IF EXISTS "authorized_view_grades" ON public.grades;
+DROP POLICY IF EXISTS "educators_manage_grades" ON public.grades;
+DROP POLICY IF EXISTS "authorized_view_payments" ON public.payment_transactions;
+DROP POLICY IF EXISTS "finance_manage_payments" ON public.payment_transactions;
+DROP POLICY IF EXISTS "users_own_notifications" ON public.notifications;
 
 -- POLICY: Lecture des écoles (visible par tous les membres)
 CREATE POLICY "users_view_their_schools"
@@ -801,15 +873,18 @@ USING (
     OR public.is_super_admin()
 );
 
--- POLICY: Notes - lecture par les membres autorisés
+-- POLICY: Notes - lecture par les membres autorisés (CORRIGÉE - utilise assessment pour school_id)
 CREATE POLICY "authorized_view_grades"
 ON public.grades
 FOR SELECT
 USING (
     EXISTS (
         SELECT 1
-        FROM public.school_members sm
-        WHERE sm.school_id = grades.school_id
+        FROM public.assessments a
+        JOIN public.class_subjects cs ON cs.id = a.class_subject_id
+        JOIN public.classes c ON c.id = cs.class_id
+        JOIN public.school_members sm ON sm.school_id = c.school_id
+        WHERE a.id = grades.assessment_id
         AND sm.user_id = auth.uid()
         AND sm.is_active = true
         AND sm.role IN (
@@ -833,15 +908,18 @@ USING (
     OR public.is_super_admin()
 );
 
--- POLICY: Notes - gestion par les enseignants et admins
+-- POLICY: Notes - gestion par les enseignants et admins (CORRIGÉE)
 CREATE POLICY "educators_manage_grades"
 ON public.grades
 FOR ALL
 USING (
     EXISTS (
         SELECT 1
-        FROM public.school_members sm
-        WHERE sm.school_id = grades.school_id
+        FROM public.assessments a
+        JOIN public.class_subjects cs ON cs.id = a.class_subject_id
+        JOIN public.classes c ON c.id = cs.class_id
+        JOIN public.school_members sm ON sm.school_id = c.school_id
+        WHERE a.id = grades.assessment_id
         AND sm.user_id = auth.uid()
         AND sm.is_active = true
         AND sm.role IN (
@@ -910,7 +988,6 @@ USING (
 -- 20_dashboard_functions.sql - Fonctions pour le dashboard
 -- ============================================================
 
--- Vérification d'accès au dashboard
 CREATE OR REPLACE FUNCTION public.can_access_school_dashboard(
     p_school_id UUID DEFAULT NULL
 )
@@ -1117,7 +1194,6 @@ $$;
 -- 21_views.sql - Vues utiles
 -- ============================================================
 
--- Vue: Élèves avec leurs classes actuelles
 CREATE OR REPLACE VIEW public.v_students_current_classes AS
 SELECT 
     s.id AS student_id,
@@ -1134,7 +1210,6 @@ LEFT JOIN public.enrollments e ON e.student_id = s.id AND e.status = 'active'
 LEFT JOIN public.classes c ON c.id = e.class_id
 LEFT JOIN public.academic_years ay ON ay.id = e.academic_year_id;
 
--- Vue: Bulletins avec détails
 CREATE OR REPLACE VIEW public.v_report_cards_details AS
 SELECT 
     rc.*,
@@ -1150,7 +1225,6 @@ JOIN public.classes c ON c.id = rc.class_id
 JOIN public.academic_terms t ON t.id = rc.academic_term_id
 JOIN public.academic_years ay ON ay.id = t.academic_year_id;
 
--- Vue: Transactions avec détails élèves
 CREATE OR REPLACE VIEW public.v_payments_with_students AS
 SELECT 
     pt.*,
@@ -1164,7 +1238,6 @@ JOIN public.students s ON s.id = pt.student_id;
 -- 22_triggers.sql - Triggers et fonctions automatiques
 -- ============================================================
 
--- Mise à jour automatique de updated_at
 CREATE OR REPLACE FUNCTION public.update_updated_at()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -1175,7 +1248,15 @@ BEGIN
 END;
 $$;
 
--- Appliquer le trigger sur les tables concernées
+DROP TRIGGER IF EXISTS update_schools_updated_at ON public.schools;
+DROP TRIGGER IF EXISTS update_subscriptions_updated_at ON public.subscriptions;
+DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON public.user_profiles;
+DROP TRIGGER IF EXISTS update_students_updated_at ON public.students;
+DROP TRIGGER IF EXISTS update_teachers_updated_at ON public.teachers;
+DROP TRIGGER IF EXISTS update_grades_updated_at ON public.grades;
+DROP TRIGGER IF EXISTS update_report_cards_updated_at ON public.report_cards;
+DROP TRIGGER IF EXISTS update_payment_transactions_updated_at ON public.payment_transactions;
+
 CREATE TRIGGER update_schools_updated_at
     BEFORE UPDATE ON public.schools
     FOR EACH ROW
@@ -1234,6 +1315,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW
@@ -1259,6 +1341,11 @@ BEGIN
         CASE 
             WHEN TG_TABLE_NAME = 'students' THEN NEW.school_id
             WHEN TG_TABLE_NAME = 'payment_transactions' THEN NEW.school_id
+            WHEN TG_TABLE_NAME = 'grades' THEN (
+                SELECT a.school_id 
+                FROM public.assessments a 
+                WHERE a.id = NEW.assessment_id
+            )
             ELSE NULL
         END,
         auth.uid(),
@@ -1272,7 +1359,10 @@ BEGIN
 END;
 $$;
 
--- Triggers d'audit sur les tables sensibles
+DROP TRIGGER IF EXISTS audit_students ON public.students;
+DROP TRIGGER IF EXISTS audit_payment_transactions ON public.payment_transactions;
+DROP TRIGGER IF EXISTS audit_grades ON public.grades;
+
 CREATE TRIGGER audit_students
     AFTER INSERT OR UPDATE OR DELETE ON public.students
     FOR EACH ROW
@@ -1283,75 +1373,65 @@ CREATE TRIGGER audit_payment_transactions
     FOR EACH ROW
     EXECUTE FUNCTION public.log_audit();
 
+CREATE TRIGGER audit_grades
+    AFTER INSERT OR UPDATE OR DELETE ON public.grades
+    FOR EACH ROW
+    EXECUTE FUNCTION public.log_audit();
+
 -- ============================================================
 -- 23_seed.sql - Données initiales
 -- ============================================================
 
--- Permissions de base
 INSERT INTO public.permissions (code, name, description) VALUES
--- Élèves
 ('students.view', 'Voir les élèves', 'Consulter la liste des élèves'),
 ('students.create', 'Créer des élèves', 'Ajouter de nouveaux élèves'),
 ('students.update', 'Modifier les élèves', 'Modifier les informations des élèves'),
 ('students.delete', 'Supprimer les élèves', 'Supprimer des élèves'),
-
--- Notes
 ('grades.view', 'Voir les notes', 'Consulter les notes des élèves'),
 ('grades.create', 'Saisir les notes', 'Saisir de nouvelles notes'),
 ('grades.update', 'Modifier les notes', 'Modifier des notes existantes'),
 ('grades.delete', 'Supprimer les notes', 'Supprimer des notes'),
-
--- Présences
 ('attendance.view', 'Voir les présences', 'Consulter les présences'),
 ('attendance.create', 'Saisir les présences', 'Enregistrer les présences'),
-
--- Finances
 ('payments.view', 'Voir les paiements', 'Consulter les transactions'),
 ('payments.create', 'Enregistrer les paiements', 'Créer des paiements'),
 ('payments.refund', 'Rembourser', 'Effectuer des remboursements'),
-
--- Bulletins
 ('reports.view', 'Voir les bulletins', 'Consulter les bulletins'),
 ('reports.publish', 'Publier les bulletins', 'Publier les bulletins'),
-
--- Administration
 ('users.manage', 'Gérer les utilisateurs', 'Gérer les utilisateurs de l''école'),
 ('school.settings', 'Paramètres de l''école', 'Modifier les paramètres de l''école'),
 ('subscription.manage', 'Gérer l''abonnement', 'Gérer l''abonnement de l''école'),
-
--- Communication
 ('communication.send', 'Envoyer des messages', 'Envoyer des communications'),
-('communication.view', 'Voir les messages', 'Consulter les communications');
+('communication.view', 'Voir les messages', 'Consulter les communications')
+ON CONFLICT (code) DO UPDATE SET 
+    name = EXCLUDED.name,
+    description = EXCLUDED.description;
 
--- Plans d'abonnement
 INSERT INTO public.plans (name, slug, description, price, currency, billing_interval, max_students, max_teachers, max_users, features) VALUES
 ('Essai', 'essai', 'Plan d''essai gratuit', 0, 'XOF', 'monthly', 10, 5, 10, 
  '{"students": true, "grades": true, "report_cards": true, "finance": false, "whatsapp": false, "ai_assistant": false, "advanced_analytics": false, "parent_portal": true}'::jsonb),
-
 ('Starter', 'starter', 'Plan de base pour petites écoles', 25000, 'XOF', 'monthly', 50, 20, 30,
  '{"students": true, "grades": true, "report_cards": true, "finance": true, "whatsapp": false, "ai_assistant": false, "advanced_analytics": false, "parent_portal": true}'::jsonb),
-
 ('Professionnel', 'professionnel', 'Plan complet pour écoles en croissance', 50000, 'XOF', 'monthly', 200, 50, 100,
  '{"students": true, "grades": true, "report_cards": true, "finance": true, "whatsapp": true, "ai_assistant": false, "advanced_analytics": true, "parent_portal": true}'::jsonb),
-
 ('Premium', 'premium', 'Plan tout inclus pour grands établissements', 100000, 'XOF', 'monthly', NULL, NULL, NULL,
  '{"students": true, "grades": true, "report_cards": true, "finance": true, "whatsapp": true, "ai_assistant": true, "advanced_analytics": true, "parent_portal": true}'::jsonb),
-
 ('Starter Annuel', 'starter_annuel', 'Plan Starter - paiement annuel', 250000, 'XOF', 'yearly', 50, 20, 30,
  '{"students": true, "grades": true, "report_cards": true, "finance": true, "whatsapp": false, "ai_assistant": false, "advanced_analytics": false, "parent_portal": true}'::jsonb),
-
 ('Professionnel Annuel', 'professionnel_annuel', 'Plan Professionnel - paiement annuel', 500000, 'XOF', 'yearly', 200, 50, 100,
  '{"students": true, "grades": true, "report_cards": true, "finance": true, "whatsapp": true, "ai_assistant": false, "advanced_analytics": true, "parent_portal": true}'::jsonb),
-
 ('Premium Annuel', 'premium_annuel', 'Plan Premium - paiement annuel', 1000000, 'XOF', 'yearly', NULL, NULL, NULL,
- '{"students": true, "grades": true, "report_cards": true, "finance": true, "whatsapp": true, "ai_assistant": true, "advanced_analytics": true, "parent_portal": true}'::jsonb);
+ '{"students": true, "grades": true, "report_cards": true, "finance": true, "whatsapp": true, "ai_assistant": true, "advanced_analytics": true, "parent_portal": true}'::jsonb)
+ON CONFLICT (slug) DO UPDATE SET 
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    price = EXCLUDED.price,
+    features = EXCLUDED.features;
 
--- Assigner les permissions aux rôles
 INSERT INTO public.role_permissions (role, permission_id)
 SELECT role, id
 FROM (
     VALUES
-    -- Super Admin a toutes les permissions
     ('super_admin', 'students.view'),
     ('super_admin', 'students.create'),
     ('super_admin', 'students.update'),
@@ -1372,8 +1452,6 @@ FROM (
     ('super_admin', 'subscription.manage'),
     ('super_admin', 'communication.send'),
     ('super_admin', 'communication.view'),
-
-    -- School Admin / Directeur
     ('school_admin', 'students.view'),
     ('school_admin', 'students.create'),
     ('school_admin', 'students.update'),
@@ -1392,7 +1470,6 @@ FROM (
     ('school_admin', 'school.settings'),
     ('school_admin', 'communication.send'),
     ('school_admin', 'communication.view'),
-
     ('directeur', 'students.view'),
     ('directeur', 'students.create'),
     ('directeur', 'students.update'),
@@ -1410,8 +1487,6 @@ FROM (
     ('directeur', 'school.settings'),
     ('directeur', 'communication.send'),
     ('directeur', 'communication.view'),
-
-    -- Enseignant
     ('enseignant', 'students.view'),
     ('enseignant', 'grades.view'),
     ('enseignant', 'grades.create'),
@@ -1420,7 +1495,6 @@ FROM (
     ('enseignant', 'attendance.create'),
     ('enseignant', 'reports.view'),
     ('enseignant', 'communication.view'),
-
     ('prof_principal', 'students.view'),
     ('prof_principal', 'grades.view'),
     ('prof_principal', 'grades.create'),
@@ -1431,16 +1505,12 @@ FROM (
     ('prof_principal', 'reports.publish'),
     ('prof_principal', 'communication.view'),
     ('prof_principal', 'communication.send'),
-
-    -- Comptable
     ('comptable', 'students.view'),
     ('comptable', 'payments.view'),
     ('comptable', 'payments.create'),
     ('comptable', 'payments.refund'),
     ('comptable', 'reports.view'),
     ('comptable', 'communication.view'),
-
-    -- Secrétaire
     ('secretaire', 'students.view'),
     ('secretaire', 'students.create'),
     ('secretaire', 'students.update'),
@@ -1448,26 +1518,19 @@ FROM (
     ('secretaire', 'payments.view'),
     ('secretaire', 'communication.view'),
     ('secretaire', 'communication.send'),
-
-    -- Parent
     ('parent', 'students.view'),
     ('parent', 'grades.view'),
     ('parent', 'attendance.view'),
     ('parent', 'payments.view'),
     ('parent', 'reports.view'),
     ('parent', 'communication.view'),
-
-    -- Élève
     ('eleve', 'grades.view'),
     ('eleve', 'attendance.view'),
     ('eleve', 'reports.view'),
     ('eleve', 'communication.view')
 ) AS data(role, permission_code)
 JOIN public.permissions p ON p.code = data.permission_code
-WHERE NOT EXISTS (
-    SELECT 1 FROM public.role_permissions rp 
-    WHERE rp.role = data.role AND rp.permission_id = p.id
-);
+ON CONFLICT (role, permission_id) DO NOTHING;
 
 -- ============================================================
 -- POLITIQUES DE SÉCURITÉ (ROW LEVEL SECURITY - RLS)
@@ -1482,11 +1545,30 @@ BEGIN
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'public' 
+        AND table_type = 'BASE TABLE'
     LOOP
         EXECUTE format('ALTER TABLE public.%I DISABLE ROW LEVEL SECURITY;', t);
     END LOOP;
 END $$;
 
 -- ============================================================
--- FIN DU SCRIPT
+-- VÉRIFICATION FINALE - Liste des tables créées
+-- ============================================================
+
+DO $$
+DECLARE
+    table_count integer;
+BEGIN
+    SELECT COUNT(*) INTO table_count
+    FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_type = 'BASE TABLE';
+    
+    RAISE NOTICE '✅ Base de données initialisée avec succès!';
+    RAISE NOTICE '📊 Nombre total de tables: %', table_count;
+    RAISE NOTICE '🏫 Système IVOIREÉCOLE+ prêt à l''emploi';
+END $$;
+
+-- ============================================================
+-- FIN DU SCRIPT - Version 2.0.3
 -- ============================================================
