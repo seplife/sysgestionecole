@@ -40,18 +40,16 @@ export const sanitizeSchoolForDb = (school: any) => ({
 export const sanitizeStudentForDb = (student: any) => ({
   id: toValidUuid(student.id),
   school_id: toValidUuid(student.school_id || 'school-palmeraie-01'),
-  class_id: toValidUuid(student.class_id || 'cls-3eme-2'),
+  user_id: null,
   registration_number: student.registration_number || `REG-${Date.now()}`,
   first_name: student.first_name || '',
   last_name: student.last_name || '',
-  date_of_birth: student.date_of_birth && student.date_of_birth.trim() !== '' ? student.date_of_birth : null,
+  date_of_birth: student.date_of_birth && String(student.date_of_birth).trim() !== '' ? student.date_of_birth : null,
   place_of_birth: student.place_of_birth || null,
   gender: ['M', 'F'].includes(student.gender) ? student.gender : 'M',
   nationality: student.nationality || 'Ivoirienne',
-  blood_group: student.blood_group || null,
-  status: student.status || 'Inscrit',
-  address: student.address || null,
-  photo_url: student.photo_url || null
+  photo_url: student.photo_url || null,
+  status: ['Inscrit', 'Reinscrit', 'Transfere', 'Radie'].includes(student.status) ? student.status : 'Inscrit'
 });
 
 export const sanitizeClassForDb = (cls: any) => ({
@@ -59,9 +57,7 @@ export const sanitizeClassForDb = (cls: any) => ({
   school_id: toValidUuid(cls.school_id || 'school-palmeraie-01'),
   name: cls.name || 'Classe',
   level: cls.level || 'Collège',
-  section: cls.section || null,
-  room_number: cls.room_number || null,
-  max_capacity: Number(cls.max_capacity) || 50
+  capacity: Number(cls.capacity || cls.max_capacity) || 50
 });
 
 export const sanitizeSubjectForDb = (sbj: any) => ({
@@ -69,15 +65,14 @@ export const sanitizeSubjectForDb = (sbj: any) => ({
   school_id: toValidUuid(sbj.school_id || 'school-palmeraie-01'),
   code: sbj.code || 'MAT',
   name: sbj.name || 'Matière',
-  category: sbj.category || 'Général',
-  coefficient: Number(sbj.coefficient) || 1,
-  description: sbj.description || null
+  coefficient: Number(sbj.coefficient) || 1
 });
 
 export const sanitizePaymentForDb = (p: any) => ({
   id: toValidUuid(p.id),
   school_id: toValidUuid(p.school_id || 'school-palmeraie-01'),
   student_id: toValidUuid(p.student_id || 'std-001'),
+  fee_type_id: null,
   amount: Number(p.amount) || 0,
   currency: 'XOF',
   payment_method: ['cash', 'mobile_money', 'bank_transfer', 'check'].includes(p.payment_method)
@@ -85,19 +80,32 @@ export const sanitizePaymentForDb = (p: any) => ({
     : 'mobile_money',
   reference: p.transaction_id || p.receipt_number || `REF-${Date.now()}`,
   status: p.status === 'Succès' ? 'completed' : 'pending',
-  description: p.student_name ? `Paiement de ${p.student_name}` : 'Paiement scolarité'
+  description: p.student_name ? `Paiement de ${p.student_name}` : 'Paiement scolarité',
+  created_by: null
 });
 
 export const sanitizeParentForDb = (prt: any) => ({
   id: toValidUuid(prt.id),
   school_id: toValidUuid(prt.school_id || 'school-palmeraie-01'),
+  user_id: null,
   first_name: prt.first_name || '',
   last_name: prt.last_name || '',
   phone: prt.phone || null,
   whatsapp: prt.whatsapp || null,
   email: prt.email || null,
-  profession: prt.profession || null,
   address: prt.address || null
+});
+
+export const sanitizeTeacherForDb = (t: any) => ({
+  id: toValidUuid(t.id),
+  school_id: toValidUuid(t.school_id || 'school-palmeraie-01'),
+  user_id: null,
+  first_name: t.first_name || '',
+  last_name: t.last_name || '',
+  email: t.email || null,
+  phone: t.phone || null,
+  specialization: t.subject_name || t.specialization || null,
+  status: t.is_active !== false ? 'active' : 'inactive'
 });
 
 export const sanitizeUserProfileForDb = (usr: any) => ({
@@ -932,15 +940,19 @@ export const supabaseService = {
       }
 
       const rawSchools = await this.fetchSchools();
-      const rawStudents = await this.fetchStudents();
       const rawClasses = await this.fetchClasses();
       const rawSubjects = await this.fetchSubjects();
+      const rawStudents = await this.fetchStudents();
+      const rawParents = await this.fetchParents();
+      const rawStaff = await this.fetchStaff();
       const rawPayments = await this.fetchPayments();
 
       const schools = rawSchools.map(sanitizeSchoolForDb);
-      const students = rawStudents.map(sanitizeStudentForDb);
       const classes = rawClasses.map(sanitizeClassForDb);
       const subjects = rawSubjects.map(sanitizeSubjectForDb);
+      const students = rawStudents.map(sanitizeStudentForDb);
+      const parents = rawParents.map(sanitizeParentForDb);
+      const teachers = rawStaff.map(sanitizeTeacherForDb);
       const payments = rawPayments.map(sanitizePaymentForDb);
 
       const resSchools = await supabase.from('schools').upsert(schools);
@@ -949,16 +961,22 @@ export const supabaseService = {
       const resClasses = await supabase.from('classes').upsert(classes);
       if (resClasses.error) console.warn('[Sync Classes Warning]:', resClasses.error);
 
+      const resSubjects = await supabase.from('subjects').upsert(subjects);
+      if (resSubjects.error) console.warn('[Sync Subjects Warning]:', resSubjects.error);
+
       const resStudents = await supabase.from('students').upsert(students);
       if (resStudents.error) console.warn('[Sync Students Warning]:', resStudents.error);
 
-      const resSubjects = await supabase.from('subjects').upsert(subjects);
-      if (resSubjects.error) console.warn('[Sync Subjects Warning]:', resSubjects.error);
+      const resParents = await supabase.from('parents').upsert(parents);
+      if (resParents.error) console.warn('[Sync Parents Warning]:', resParents.error);
+
+      const resTeachers = await supabase.from('teachers').upsert(teachers);
+      if (resTeachers.error) console.warn('[Sync Teachers Warning]:', resTeachers.error);
 
       const resPayments = await supabase.from('payment_transactions').upsert(payments);
       if (resPayments.error) console.warn('[Sync Payments Warning]:', resPayments.error);
 
-      return { success: true, message: 'Toutes les données ont été synchronisées avec succès dans la base de données Supabase !' };
+      return { success: true, message: 'Toutes les données (Écoles, Classes, Matières, Élèves, Parents, Enseignants, Paiements) ont été synchronisées avec succès dans Supabase !' };
     } catch (error: any) {
       return { success: false, message: error?.message || 'Erreur lors de la synchronisation Supabase.' };
     }
