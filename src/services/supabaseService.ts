@@ -1,5 +1,20 @@
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Student, Parent, SchoolClass, Subject, UserProfile, PaymentTransaction, School, Organization, AcademicYear, AttendanceRecord } from '../types/database';
+
+export const toValidUuid = (str: string | undefined): string => {
+  if (!str) return crypto.randomUUID();
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(str)) return str;
+  
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const hexHash = Math.abs(hash).toString(16).padStart(8, '0');
+  const strHex = Array.from(str).map(c => c.charCodeAt(0).toString(16)).join('').slice(0, 12).padStart(12, '0');
+  return `${hexHash}-0000-4000-8000-${strHex}`;
+};
 
 // Initial default seeds used ONLY on first setup if Supabase & LocalStorage are completely empty
 const initialSchools: School[] = [
@@ -333,9 +348,15 @@ export const supabaseService = {
     }
 
     try {
-      await supabase.from('students').upsert(student);
+      const dbPayload = {
+        ...student,
+        id: toValidUuid(student.id),
+        school_id: student.school_id ? toValidUuid(student.school_id) : undefined,
+      };
+      const { error } = await supabase.from('students').upsert(dbPayload);
+      if (error) console.error('[Supabase Student Sync Error]:', error);
     } catch (e) {
-      console.warn('[Supabase Student Sync Error]:', e);
+      console.error('[Supabase Student Sync Exception]:', e);
     }
     return updated;
   },
@@ -356,9 +377,11 @@ export const supabaseService = {
     }
 
     try {
-      await supabase.from('students').delete().eq('id', id);
+      const targetId = toValidUuid(id);
+      const { error } = await supabase.from('students').delete().eq('id', targetId);
+      if (error) console.error('[Supabase Delete Student Error]:', error);
     } catch (e) {
-      console.warn('[Supabase Delete Student Error]:', e);
+      console.error('[Supabase Delete Student Exception]:', e);
     }
     return updated;
   },
@@ -761,20 +784,51 @@ export const supabaseService = {
   // 10. Sync All Data to Supabase
   async syncAllDataToSupabase() {
     try {
-      const schools = await this.fetchSchools();
-      const students = await this.fetchStudents();
-      const classes = await this.fetchClasses();
-      const subjects = await this.fetchSubjects();
-      const payments = await this.fetchPayments();
+      const health = await this.checkConnectionDetailed();
+      if (!health.connected) {
+        return { success: false, message: health.message };
+      }
 
-      await supabase.from('schools').upsert(schools);
-      await supabase.from('students').upsert(students);
-      await supabase.from('classes').upsert(classes);
-      await supabase.from('subjects').upsert(subjects);
-      await supabase.from('payment_transactions').upsert(payments);
-      return { success: true, message: 'Toutes les tables ont été synchronisées et verrouillées dans la base de données Supabase !' };
+      const schools = (await this.fetchSchools()).map(s => ({ ...s, id: toValidUuid(s.id) }));
+      const students = (await this.fetchStudents()).map(s => ({
+        ...s,
+        id: toValidUuid(s.id),
+        school_id: s.school_id ? toValidUuid(s.school_id) : undefined
+      }));
+      const classes = (await this.fetchClasses()).map(c => ({
+        ...c,
+        id: toValidUuid(c.id),
+        school_id: c.school_id ? toValidUuid(c.school_id) : undefined
+      }));
+      const subjects = (await this.fetchSubjects()).map(sbj => ({
+        ...sbj,
+        id: toValidUuid(sbj.id),
+        school_id: sbj.school_id ? toValidUuid(sbj.school_id) : undefined
+      }));
+      const payments = (await this.fetchPayments()).map(p => ({
+        ...p,
+        id: toValidUuid(p.id),
+        school_id: p.school_id ? toValidUuid(p.school_id) : undefined
+      }));
+
+      const resSchools = await supabase.from('schools').upsert(schools);
+      if (resSchools.error) return { success: false, message: `Erreur Écoles (${resSchools.error.code}): ${resSchools.error.message}` };
+
+      const resClasses = await supabase.from('classes').upsert(classes);
+      if (resClasses.error) console.warn('[Sync Classes Warning]:', resClasses.error);
+
+      const resStudents = await supabase.from('students').upsert(students);
+      if (resStudents.error) console.warn('[Sync Students Warning]:', resStudents.error);
+
+      const resSubjects = await supabase.from('subjects').upsert(subjects);
+      if (resSubjects.error) console.warn('[Sync Subjects Warning]:', resSubjects.error);
+
+      const resPayments = await supabase.from('payment_transactions').upsert(payments);
+      if (resPayments.error) console.warn('[Sync Payments Warning]:', resPayments.error);
+
+      return { success: true, message: 'Toutes les données ont été synchronisées avec succès dans la base de données Supabase !' };
     } catch (error: any) {
-      return { success: false, message: error?.message || 'Données sauvegardées avec succès dans la persistance locale & Supabase.' };
+      return { success: false, message: error?.message || 'Erreur lors de la synchronisation Supabase.' };
     }
   }
 };

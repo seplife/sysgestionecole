@@ -1470,5 +1470,23 @@ WHERE NOT EXISTS (
 );
 
 -- ============================================================
+-- POLITIQUES DE SÉCURITÉ (ROW LEVEL SECURITY - RLS)
+-- Accès complet pour la synchronisation du client web
+-- ============================================================
+
+DO $$ 
+DECLARE 
+    t text;
+BEGIN
+    FOR t IN 
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+    LOOP
+        EXECUTE format('ALTER TABLE public.%I DISABLE ROW LEVEL SECURITY;', t);
+    END LOOP;
+END $$;
+
+-- ============================================================
 -- FIN DU SCRIPT
 -- ============================================================

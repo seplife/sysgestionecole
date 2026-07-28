@@ -24,8 +24,17 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({ onNavigate, on
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loading, setLoading] = useState(true);
+  const [supabaseStatus, setSupabaseStatus] = useState<{ connected: boolean; configured: boolean; message: string }>({
+    connected: false,
+    configured: false,
+    message: 'Vérification du statut Supabase...'
+  });
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
 
   useEffect(() => {
+    supabaseService.checkConnectionDetailed().then(setSupabaseStatus);
+
     Promise.all([
       supabaseService.fetchStudents(),
       supabaseService.fetchClasses()
@@ -35,6 +44,16 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({ onNavigate, on
       setLoading(false);
     });
   }, []);
+
+  const handleSyncSupabase = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    const res = await supabaseService.syncAllDataToSupabase();
+    setSyncing(false);
+    setSyncResult(res.message);
+    const updatedStatus = await supabaseService.checkConnectionDetailed();
+    setSupabaseStatus(updatedStatus);
+  };
 
   const totalStudents = students.length;
   const boysCount = students.filter(s => s.gender === 'M').length;
@@ -198,6 +217,56 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({ onNavigate, on
               Bulletins MENA
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* SUPABASE DATABASE DIAGNOSTIC BANNER */}
+      <div className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
+        supabaseStatus.connected 
+          ? 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800' 
+          : supabaseStatus.configured 
+            ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800'
+            : 'bg-rose-50/70 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800'
+      }`}>
+        <div className="flex items-start gap-3">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+            supabaseStatus.connected 
+              ? 'bg-emerald-500 text-white' 
+              : 'bg-amber-500 text-white'
+          }`}>
+            {supabaseStatus.connected ? <CheckCircle2 className="w-6 h-6" /> : <AlertTriangle className="w-6 h-6" />}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                Base de données Supabase Cloud : {supabaseStatus.connected ? 'Connectée & Active' : 'En Attente de Synchronisation'}
+              </h3>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                supabaseStatus.connected ? 'bg-emerald-200 text-emerald-900' : 'bg-amber-200 text-amber-900'
+              }`}>
+                {supabaseStatus.connected ? 'Enregistrement Temps Réel ON' : 'Mode Local Active'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+              {supabaseStatus.message}
+            </p>
+            {syncResult && (
+              <p className="text-xs font-semibold text-brand-700 dark:text-brand-300 mt-1">
+                Résultat : {syncResult}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleSyncSupabase}
+            disabled={syncing}
+            className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow transition-all flex items-center gap-2"
+          >
+            {syncing ? <Clock className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+            <span>{syncing ? 'Synchronisation...' : 'Synchroniser vers Supabase'}</span>
+          </button>
         </div>
       </div>
 

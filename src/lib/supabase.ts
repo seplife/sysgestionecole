@@ -1,7 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = "https://bnxmiuszccgzbpvcboay.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_pNvBLssNjvrhsPmYbCGDPw_rQifr7Qr";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://bnxmiuszccgzbpvcboay.supabase.co";
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_pNvBLssNjvrhsPmYbCGDPw_rQifr7Qr";
+
+export const isSupabaseConfigured = () => {
+  return Boolean(
+    SUPABASE_URL && 
+    SUPABASE_ANON_KEY && 
+    !SUPABASE_ANON_KEY.startsWith("sb_publishable_") &&
+    SUPABASE_URL.startsWith("https://")
+  );
+};
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -9,3 +18,4 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     autoRefreshToken: true,
   }
 });
+
