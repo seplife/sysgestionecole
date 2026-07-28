@@ -58,7 +58,10 @@ AS $$
 $$;
 
 -- Version avec paramètre p_user_id
-CREATE OR REPLACE FUNCTION public.is_super_admin(p_user_id UUID)
+-- DROP obligatoire : PostgreSQL interdit de changer le nom d'un paramètre
+-- avec CREATE OR REPLACE (erreur 42P13). CASCADE recrée les dépendances.
+DROP FUNCTION IF EXISTS public.is_super_admin(UUID) CASCADE;
+CREATE FUNCTION public.is_super_admin(p_user_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
@@ -74,22 +77,39 @@ AS $$
     );
 $$;
 
--- Ancienne signature avec user_id comme nom de paramètre (compatibilité)
-DROP FUNCTION IF EXISTS public.is_super_admin(UUID);
-CREATE OR REPLACE FUNCTION public.is_super_admin(p_user_id UUID)
+-- ==============================================================================
+-- ÉTAPE 2b : is_school_admin() - Vérifie si l'utilisateur est admin d'une école
+-- SECURITY DEFINER → lit school_members hors contexte RLS utilisateur
+-- → la policy qui l'appelle ne déclenche PAS de réévaluation récursive RLS
+-- ==============================================================================
+
+DROP FUNCTION IF EXISTS public.is_school_admin(UUID, UUID) CASCADE;
+CREATE OR REPLACE FUNCTION public.is_school_admin(
+    p_school_id UUID,
+    p_user_id UUID DEFAULT auth.uid()
+)
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-    SELECT COALESCE(
-        (SELECT is_super_admin
-         FROM public.user_profiles
-         WHERE id = p_user_id
-         AND is_active = true),
-        FALSE
-    );
+    SELECT
+        public.is_super_admin(p_user_id)
+        OR EXISTS (
+            SELECT 1
+            FROM public.school_members sm
+            WHERE sm.school_id = p_school_id
+              AND sm.user_id = p_user_id
+              AND sm.role IN (
+                  'super_admin',
+                  'school_admin',
+                  'directeur',
+                  'secretaire',
+                  'directeur_etudes'
+              )
+              AND sm.is_active = TRUE
+        );
 $$;
 
 -- ==============================================================================
@@ -98,6 +118,7 @@ $$;
 -- Le contexte SECURITY DEFINER contourne le RLS -> PAS de récursion
 -- ==============================================================================
 
+DROP FUNCTION IF EXISTS public.get_user_school_ids(UUID) CASCADE;
 CREATE OR REPLACE FUNCTION public.get_user_school_ids(user_uuid UUID DEFAULT NULL)
 RETURNS SETOF UUID
 LANGUAGE sql
@@ -114,6 +135,10 @@ $$;
 -- ==============================================================================
 -- ÉTAPE 4 : Réécrire get_user_schools() - SECURITY DEFINER
 -- ==============================================================================
+
+-- Drop both versions to avoid parameter name conflicts
+DROP FUNCTION IF EXISTS public.get_user_schools() CASCADE;
+DROP FUNCTION IF EXISTS public.get_user_schools(UUID) CASCADE;
 
 CREATE OR REPLACE FUNCTION public.get_user_schools()
 RETURNS TABLE(school_id UUID, role VARCHAR)
@@ -159,12 +184,13 @@ DROP POLICY IF EXISTS "school_members_all" ON public.school_members;
 -- ÉTAPE 6 : Recréer les policies RLS sur school_members SANS RÉCURSION
 --
 -- RÈGLE CLÉ: La policy sur school_members NE DOIT PAS faire de sub-query
---            qui relit school_members (provoque 42P17).
+--            inline qui relit school_members (provoque 42P17).
 --
--- AUTORISÉ dans la policy school_members:
---   - auth.uid()                        (direct, pas de table)
---   - is_super_admin()                  (lit user_profiles, safe)
---   - get_user_school_ids()             (SECURITY DEFINER, contourne RLS)
+-- AUTORISÉ dans les policies school_members:
+--   - auth.uid()             (direct, aucune table)
+--   - is_super_admin()       (lit user_profiles, jamais school_members)
+--   - get_user_school_ids()  (SECURITY DEFINER, contourne le RLS)
+--   - is_school_admin()      (SECURITY DEFINER, contourne le RLS)
 -- ==============================================================================
 
 -- SELECT: voir sa propre ligne, ou lignes de ses écoles
@@ -177,59 +203,31 @@ USING (
     OR school_id IN (SELECT public.get_user_school_ids(auth.uid()))
 );
 
--- INSERT: super admins et school_admins peuvent ajouter des membres
+-- INSERT: is_school_admin() SECURITY DEFINER lit school_members hors RLS → safe
 CREATE POLICY "school_members_insert"
 ON public.school_members
 FOR INSERT
 WITH CHECK (
-    public.is_super_admin()
-    OR school_id IN (
-        SELECT sm2.school_id
-        FROM public.school_members sm2
-        WHERE sm2.user_id = auth.uid()
-        AND sm2.role IN ('super_admin', 'school_admin')
-        AND sm2.is_active = true
-    )
+    public.is_school_admin(school_id)
 );
 
--- UPDATE: super admins et school_admins de la même école
+-- UPDATE: is_school_admin() SECURITY DEFINER → aucune récursion
 CREATE POLICY "school_members_update"
 ON public.school_members
 FOR UPDATE
 USING (
-    public.is_super_admin()
-    OR school_id IN (
-        SELECT sm2.school_id
-        FROM public.school_members sm2
-        WHERE sm2.user_id = auth.uid()
-        AND sm2.role IN ('super_admin', 'school_admin')
-        AND sm2.is_active = true
-    )
+    public.is_school_admin(school_id)
 )
 WITH CHECK (
-    public.is_super_admin()
-    OR school_id IN (
-        SELECT sm2.school_id
-        FROM public.school_members sm2
-        WHERE sm2.user_id = auth.uid()
-        AND sm2.role IN ('super_admin', 'school_admin')
-        AND sm2.is_active = true
-    )
+    public.is_school_admin(school_id)
 );
 
--- DELETE: uniquement super admins et school_admins
+-- DELETE: is_school_admin() SECURITY DEFINER → aucune récursion
 CREATE POLICY "school_members_delete"
 ON public.school_members
 FOR DELETE
 USING (
-    public.is_super_admin()
-    OR school_id IN (
-        SELECT sm2.school_id
-        FROM public.school_members sm2
-        WHERE sm2.user_id = auth.uid()
-        AND sm2.role IN ('super_admin', 'school_admin')
-        AND sm2.is_active = true
-    )
+    public.is_school_admin(school_id)
 );
 
 -- ==============================================================================
@@ -252,18 +250,12 @@ USING (
     OR id IN (SELECT public.get_user_school_ids(auth.uid()))
 );
 
+-- schools_modify utilise is_school_admin() SECURITY DEFINER → safe
 CREATE POLICY "schools_modify"
 ON public.schools
 FOR ALL
 USING (
-    public.is_super_admin()
-    OR id IN (
-        SELECT sm.school_id
-        FROM public.school_members sm
-        WHERE sm.user_id = auth.uid()
-        AND sm.role IN ('super_admin', 'school_admin')
-        AND sm.is_active = true
-    )
+    public.is_school_admin(id)
 );
 
 -- STUDENTS
@@ -326,6 +318,10 @@ WITH CHECK (id = auth.uid() OR public.is_super_admin());
 -- ==============================================================================
 -- ÉTAPE 8 : Corriger has_permission() - SECURITY DEFINER pour éviter récursion
 -- ==============================================================================
+
+DROP FUNCTION IF EXISTS public.has_permission(VARCHAR, UUID, UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.has_permission(VARCHAR, UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.has_permission(VARCHAR) CASCADE;
 
 CREATE OR REPLACE FUNCTION public.has_permission(
     permission_code VARCHAR,
@@ -474,7 +470,7 @@ COMMIT;
 --
 -- SELECT proname, prosecdef, prosrc
 -- FROM pg_proc
--- WHERE proname IN ('is_super_admin', 'get_user_school_ids')
+-- WHERE proname IN ('is_super_admin', 'get_user_school_ids', 'get_user_schools')
 -- AND pronamespace = 'public'::regnamespace;
 --
 -- Test rapide (remplacer l'UUID par un vrai user_id):
