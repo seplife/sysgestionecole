@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, DollarSign, Smartphone, CheckCircle2, Printer, Filter, Search, ShieldCheck, ArrowDownRight, Sparkles, MessageSquare } from 'lucide-react';
-import { PaymentTransaction, StudentFee } from '../../types/database';
-import { supabaseService } from '../../services/supabaseService';
+import { PaymentTransaction } from '../../types/database';
+import { paymentService } from '../../services/supabase';
+import { useTenant } from '../../context/TenantContext';
 
 export const FinanceModule: React.FC = () => {
+  const { currentSchool } = useTenant();
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
 
   useEffect(() => {
-    supabaseService.fetchPayments().then(data => setPayments(data));
-  }, []);
+    if (currentSchool?.id) {
+      paymentService.getAll(currentSchool.id)
+        .then(data => setPayments(data))
+        .catch(err => console.warn('[FinanceModule Load Error]:', err));
+    }
+  }, [currentSchool?.id]);
+
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Form state for Mobile Money Payment Simulator
@@ -16,44 +23,51 @@ export const FinanceModule: React.FC = () => {
   const [payAmount, setPayAmount] = useState('150000');
   const [totalFeeAmount, setTotalFeeAmount] = useState('300000');
   const [relanceDate, setRelanceDate] = useState('2026-08-15');
-  const [payMethod, setPayMethod] = useState<'Wave' | 'Orange Money' | 'MTN MoMo' | 'Moov Money'>('Wave');
+  const [payMethod, setPayMethod] = useState<'wave' | 'orange_money' | 'mtn_momo' | 'moov_money'>('wave');
   const [payPhone, setPayPhone] = useState('+225 07 09 88 77 66');
   const [isProcessing, setIsProcessing] = useState(false);
   const [successReceipt, setSuccessReceipt] = useState<{ tx: PaymentTransaction; remaining: number; relance: string } | null>(null);
 
-  const handleExecutePayment = (e: React.FormEvent) => {
+  const handleExecutePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
 
-    setTimeout(() => {
+    try {
       const randTx = `${payMethod.toUpperCase()}-CI-${Math.floor(100000000 + Math.random() * 900000000)}`;
       const amountPaid = parseInt(payAmount) || 150000;
       const totalFee = parseInt(totalFeeAmount) || 300000;
       const remaining = Math.max(0, totalFee - amountPaid);
 
-      const newTx: PaymentTransaction = {
-        id: `pay-${Date.now()}`,
-        school_id: 'school-palmeraie-01',
-        student_name: payStudentName,
-        receipt_number: `REC-2026-00${Math.floor(484 + Math.random() * 500)}`,
+      const createdTx = await paymentService.create({
+        school_id: currentSchool.id,
+        student_id: '20000000-0000-4000-8000-000000000001',
         amount: amountPaid,
         payment_method: payMethod,
-        transaction_id: randTx,
-        payer_phone: payPhone,
-        payer_name: 'Parent d\'élève',
-        status: 'Succès',
-        created_at: new Date().toISOString()
+        reference: randTx,
+        status: 'completed',
+        payment_date: new Date().toISOString().split('T')[0],
+        description: `Paiement Mobile Money pour ${payStudentName}`
+      });
+
+      const fullTx: PaymentTransaction = {
+        ...createdTx,
+        student_name: payStudentName,
+        receipt_number: `REC-2026-00${Math.floor(484 + Math.random() * 500)}`,
+        payer_phone: payPhone
       };
 
-      setPayments([newTx, ...payments]);
-      supabaseService.savePayment(newTx);
+      setPayments([fullTx, ...payments]);
       setIsProcessing(false);
       setSuccessReceipt({
-        tx: newTx,
+        tx: fullTx,
         remaining,
         relance: relanceDate
       });
-    }, 1500);
+    } catch (err: any) {
+      console.error('[Finance Save Error]:', err);
+      setIsProcessing(false);
+      alert(`Erreur d'enregistrement du paiement: ${err.message || err}`);
+    }
   };
 
   const getWhatsAppReceiptMessage = (studentName: string, amount: number, remaining: number, relance: string, paymentDate?: string) => {
@@ -195,16 +209,21 @@ export const FinanceModule: React.FC = () => {
                 <div>
                   <label className="block font-bold text-slate-600 dark:text-slate-300 mb-1">Choix de l'Opérateur Mobile Money</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {(['Wave', 'Orange Money', 'MTN MoMo', 'Moov Money'] as const).map(op => (
+                    {[
+                      { code: 'wave', label: 'Wave' },
+                      { code: 'orange_money', label: 'Orange Money' },
+                      { code: 'mtn_momo', label: 'MTN MoMo' },
+                      { code: 'moov_money', label: 'Moov Money' }
+                    ].map(op => (
                       <button
                         type="button"
-                        key={op}
-                        onClick={() => setPayMethod(op)}
+                        key={op.code}
+                        onClick={() => setPayMethod(op.code as any)}
                         className={`p-2 rounded-xl border text-xs font-bold transition-all ${
-                          payMethod === op ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-xs' : 'border-slate-200 dark:border-slate-700 text-slate-600'
+                          payMethod === op.code ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-xs' : 'border-slate-200 dark:border-slate-700 text-slate-600'
                         }`}
                       >
-                        {op}
+                        {op.label}
                       </button>
                     ))}
                   </div>

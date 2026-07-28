@@ -236,14 +236,39 @@ CREATE INDEX IF NOT EXISTS idx_attendance_school_date ON public.attendance_recor
 CREATE INDEX IF NOT EXISTS idx_grades_assessment ON public.grades(assessment_id);
 
 -- ------------------------------------------------------------
--- 7. ROW LEVEL SECURITY (RLS) & HELPER FUNCTIONS
+-- 7. FONCTIONS SECURITY DEFINER (Sécurité anti-récursion)
 -- ------------------------------------------------------------
 
--- Désactivation RLS ou règles d'accès ouvertes pour environnement hybride SaaS web
+CREATE OR REPLACE FUNCTION public.get_user_school_ids(user_uuid UUID)
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+    SELECT school_id 
+    FROM public.school_members 
+    WHERE user_id = user_uuid AND is_active = true;
+$$;
+
+-- ------------------------------------------------------------
+-- 8. PURGE DES ANCIENNES POLITIQUES ET DÉSACTIVATION RLS (Fix 42P17)
+-- ------------------------------------------------------------
+
 DO $$ 
 DECLARE 
+    pol RECORD;
     t text;
 BEGIN
+    -- Supprimer dynamiquement TOUTES les politiques RLS préexistantes pour éliminer la récursion 42P17
+    FOR pol IN 
+        SELECT policyname, tablename 
+        FROM pg_policies 
+        WHERE schemaname = 'public'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I;', pol.policyname, pol.tablename);
+    END LOOP;
+
+    -- Désactiver RLS sur toutes les tables de la base
     FOR t IN 
         SELECT table_name 
         FROM information_schema.tables 
@@ -251,7 +276,5 @@ BEGIN
         AND table_type = 'BASE TABLE'
     LOOP
         EXECUTE format('ALTER TABLE public.%I DISABLE ROW LEVEL SECURITY;', t);
-        EXECUTE format('DROP POLICY IF EXISTS "Allow full access" ON public.%I;', t);
-        EXECUTE format('CREATE POLICY "Allow full access" ON public.%I FOR ALL USING (true) WITH CHECK (true);', t);
     END LOOP;
 END $$;
