@@ -616,11 +616,27 @@ AS $$
     SELECT auth.uid();
 $$;
 
+-- Helper function pour récupérer les school_id sans récursion RLS
+CREATE OR REPLACE FUNCTION public.get_user_school_ids(user_uuid UUID DEFAULT auth.uid())
+RETURNS SETOF UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT school_id
+    FROM public.school_members
+    WHERE user_id = COALESCE(user_uuid, auth.uid())
+    AND is_active = true;
+$$;
+
 -- Vérifier si l'utilisateur est super_admin
 CREATE OR REPLACE FUNCTION public.is_super_admin(user_id UUID DEFAULT NULL)
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
+SECURITY DEFINER
+SET search_path = public
 AS $$
     SELECT EXISTS (
         SELECT 1
@@ -636,6 +652,8 @@ CREATE OR REPLACE FUNCTION public.get_user_schools(user_id UUID DEFAULT NULL)
 RETURNS TABLE(school_id UUID, role VARCHAR)
 LANGUAGE sql
 STABLE
+SECURITY DEFINER
+SET search_path = public
 AS $$
     SELECT school_id, role
     FROM public.school_members
@@ -762,12 +780,8 @@ CREATE POLICY "members_view_their_school_members"
 ON public.school_members
 FOR SELECT
 USING (
-    school_id IN (
-        SELECT school_id
-        FROM public.school_members
-        WHERE user_id = auth.uid()
-        AND is_active = true
-    )
+    user_id = auth.uid()
+    OR school_id IN (SELECT public.get_user_school_ids(auth.uid()))
     OR public.is_super_admin()
 );
 
@@ -776,12 +790,7 @@ CREATE POLICY "school_members_view_students"
 ON public.students
 FOR SELECT
 USING (
-    school_id IN (
-        SELECT school_id
-        FROM public.school_members
-        WHERE user_id = auth.uid()
-        AND is_active = true
-    )
+    school_id IN (SELECT public.get_user_school_ids(auth.uid()))
     OR public.is_super_admin()
 );
 
