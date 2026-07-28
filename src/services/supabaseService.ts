@@ -214,16 +214,52 @@ export const setLocalCache = <T>(key: string, value: T) => {
   }
 };
 
+export const checkConnectionDetailed = async (): Promise<{ connected: boolean; configured: boolean; message: string; error?: any }> => {
+  const configured = isSupabaseConfigured();
+  if (!configured) {
+    return {
+      connected: false,
+      configured: false,
+      message: 'Supabase n\'est pas encore configuré. Veuillez renseigner VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY dans votre fichier .env.'
+    };
+  }
+  try {
+    const { error } = await supabase.from('schools').select('id').limit(1);
+    if (error) {
+      return {
+        connected: false,
+        configured: true,
+        message: `Erreur Supabase (${error.code || 'API'}): ${error.message}`,
+        error
+      };
+    }
+    return {
+      connected: true,
+      configured: true,
+      message: 'Connecté et synchronisé avec la base de données Supabase.'
+    };
+  } catch (e: any) {
+    return {
+      connected: false,
+      configured: true,
+      message: `Exception de connexion: ${e?.message || 'Erreur réseau'}`,
+      error: e
+    };
+  }
+};
+
 export const supabaseService = {
   // Check Connection Status
   async checkConnection() {
     try {
-      const { data, error } = await supabase.from('schools').select('id').limit(1);
+      const { error } = await supabase.from('schools').select('id').limit(1);
       return !error;
     } catch {
       return false;
     }
   },
+
+  checkConnectionDetailed,
 
   // 1. Schools Configuration
   async fetchSchools(): Promise<School[]> {
@@ -782,7 +818,7 @@ export const supabaseService = {
   },
 
   // 10. Sync All Data to Supabase
-  async syncAllDataToSupabase() {
+  async syncAllDataToSupabase(): Promise<{ success: boolean; message: string }> {
     try {
       const health = await this.checkConnectionDetailed();
       if (!health.connected) {

@@ -8,7 +8,7 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, 
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { useSubscription } from '../../context/SubscriptionContext';
-import { supabaseService } from '../../services/supabaseService';
+import { supabaseService, checkConnectionDetailed } from '../../services/supabaseService';
 import { Student, SchoolClass } from '../../types/database';
 
 interface DashboardModuleProps {
@@ -33,7 +33,7 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({ onNavigate, on
   const [syncResult, setSyncResult] = useState<string | null>(null);
 
   useEffect(() => {
-    supabaseService.checkConnectionDetailed().then(setSupabaseStatus);
+    checkConnectionDetailed().then(setSupabaseStatus);
 
     Promise.all([
       supabaseService.fetchStudents(),
@@ -51,7 +51,7 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({ onNavigate, on
     const res = await supabaseService.syncAllDataToSupabase();
     setSyncing(false);
     setSyncResult(res.message);
-    const updatedStatus = await supabaseService.checkConnectionDetailed();
+    const updatedStatus = await checkConnectionDetailed();
     setSupabaseStatus(updatedStatus);
   };
 
