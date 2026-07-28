@@ -1,8 +1,10 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Student, Parent, SchoolClass, Subject, UserProfile, PaymentTransaction, School, Organization, AcademicYear, AttendanceRecord } from '../types/database';
 
-export const toValidUuid = (str: string | undefined): string => {
-  if (!str) return crypto.randomUUID();
+export const toValidUuid = (str: string | undefined | null): string => {
+  if (!str || typeof str !== 'string' || str.trim() === '') {
+    return '00000000-0000-4000-8000-000000000001';
+  }
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (uuidRegex.test(str)) return str;
   
@@ -15,6 +17,71 @@ export const toValidUuid = (str: string | undefined): string => {
   const strHex = Array.from(str).map(c => c.charCodeAt(0).toString(16)).join('').slice(0, 12).padStart(12, '0');
   return `${hexHash}-0000-4000-8000-${strHex}`;
 };
+
+export const sanitizeSchoolForDb = (school: any) => ({
+  id: toValidUuid(school.id),
+  name: school.name || 'École',
+  slug: school.slug || `school-${Date.now()}`,
+  registration_number: school.registration_number || null,
+  motto: school.motto || 'Foi, Discipline, Excellence',
+  address: school.address || null,
+  city: school.city || 'Abidjan',
+  phone: school.phone || null,
+  whatsapp: school.whatsapp || null,
+  email: school.email || null,
+  director_name: school.director_name || null,
+  logo_url: school.logo_url || null,
+  school_type: ['Public', 'Prive', 'Confessionnel'].includes(school.school_type) ? school.school_type : 'Prive',
+  status: ['pending', 'active', 'suspended', 'blocked', 'cancelled'].includes(school.status) ? school.status : 'active'
+});
+
+export const sanitizeStudentForDb = (student: any) => ({
+  id: toValidUuid(student.id),
+  school_id: toValidUuid(student.school_id || 'school-palmeraie-01'),
+  registration_number: student.registration_number || `REG-${Date.now()}`,
+  first_name: student.first_name || '',
+  last_name: student.last_name || '',
+  date_of_birth: student.date_of_birth || null,
+  place_of_birth: student.place_of_birth || null,
+  gender: student.gender || 'M',
+  nationality: student.nationality || 'Ivoirienne',
+  blood_group: student.blood_group || null,
+  status: student.status || 'Inscrit',
+  address: student.address || null,
+  photo_url: student.photo_url || null
+});
+
+export const sanitizeClassForDb = (cls: any) => ({
+  id: toValidUuid(cls.id),
+  school_id: toValidUuid(cls.school_id || 'school-palmeraie-01'),
+  name: cls.name || 'Classe',
+  level: cls.level || 'Collège',
+  section: cls.section || null,
+  room_number: cls.room_number || null,
+  max_capacity: cls.max_capacity || 50
+});
+
+export const sanitizeSubjectForDb = (sbj: any) => ({
+  id: toValidUuid(sbj.id),
+  school_id: toValidUuid(sbj.school_id || 'school-palmeraie-01'),
+  code: sbj.code || 'MAT',
+  name: sbj.name || 'Matière',
+  category: sbj.category || 'Général',
+  coefficient: Number(sbj.coefficient) || 1
+});
+
+export const sanitizePaymentForDb = (p: any) => ({
+  id: toValidUuid(p.id),
+  school_id: toValidUuid(p.school_id || 'school-palmeraie-01'),
+  receipt_number: p.receipt_number || `REC-${Date.now()}`,
+  student_name: p.student_name || 'Élève',
+  amount: Number(p.amount) || 0,
+  payment_method: p.payment_method || 'Espèces',
+  transaction_id: p.transaction_id || null,
+  payer_phone: p.payer_phone || null,
+  payer_name: p.payer_name || null,
+  status: p.status || 'Succès'
+});
 
 // Initial default seeds used ONLY on first setup if Supabase & LocalStorage are completely empty
 const initialSchools: School[] = [
@@ -384,11 +451,7 @@ export const supabaseService = {
     }
 
     try {
-      const dbPayload = {
-        ...student,
-        id: toValidUuid(student.id),
-        school_id: student.school_id ? toValidUuid(student.school_id) : undefined,
-      };
+      const dbPayload = sanitizeStudentForDb(student);
       const { error } = await supabase.from('students').upsert(dbPayload);
       if (error) console.error('[Supabase Student Sync Error]:', error);
     } catch (e) {
@@ -565,9 +628,11 @@ export const supabaseService = {
     setLocalCache('classes', updated);
 
     try {
-      await supabase.from('classes').upsert(cls);
+      const dbPayload = sanitizeClassForDb(cls);
+      const { error } = await supabase.from('classes').upsert(dbPayload);
+      if (error) console.error('[Supabase Class Sync Error]:', error);
     } catch (e) {
-      console.warn('[Supabase Class Sync Error]:', e);
+      console.error('[Supabase Class Sync Exception]:', e);
     }
     return updated;
   },
@@ -578,9 +643,11 @@ export const supabaseService = {
     setLocalCache('classes', updated);
 
     try {
-      await supabase.from('classes').delete().eq('id', id);
+      const targetId = toValidUuid(id);
+      const { error } = await supabase.from('classes').delete().eq('id', targetId);
+      if (error) console.error('[Supabase Delete Class Error]:', error);
     } catch (e) {
-      console.warn('[Supabase Delete Class Error]:', e);
+      console.error('[Supabase Delete Class Exception]:', e);
     }
     return updated;
   },
@@ -611,9 +678,11 @@ export const supabaseService = {
     setLocalCache('subjects', updated);
 
     try {
-      await supabase.from('subjects').upsert(sbj);
+      const dbPayload = sanitizeSubjectForDb(sbj);
+      const { error } = await supabase.from('subjects').upsert(dbPayload);
+      if (error) console.error('[Supabase Subject Sync Error]:', error);
     } catch (e) {
-      console.warn('[Supabase Subject Sync Error]:', e);
+      console.error('[Supabase Subject Sync Exception]:', e);
     }
     return updated;
   },
@@ -624,9 +693,11 @@ export const supabaseService = {
     setLocalCache('subjects', updated);
 
     try {
-      await supabase.from('subjects').delete().eq('id', id);
+      const targetId = toValidUuid(id);
+      const { error } = await supabase.from('subjects').delete().eq('id', targetId);
+      if (error) console.error('[Supabase Delete Subject Error]:', error);
     } catch (e) {
-      console.warn('[Supabase Delete Subject Error]:', e);
+      console.error('[Supabase Delete Subject Exception]:', e);
     }
     return updated;
   },
@@ -825,27 +896,17 @@ export const supabaseService = {
         return { success: false, message: health.message };
       }
 
-      const schools = (await this.fetchSchools()).map(s => ({ ...s, id: toValidUuid(s.id) }));
-      const students = (await this.fetchStudents()).map(s => ({
-        ...s,
-        id: toValidUuid(s.id),
-        school_id: s.school_id ? toValidUuid(s.school_id) : undefined
-      }));
-      const classes = (await this.fetchClasses()).map(c => ({
-        ...c,
-        id: toValidUuid(c.id),
-        school_id: c.school_id ? toValidUuid(c.school_id) : undefined
-      }));
-      const subjects = (await this.fetchSubjects()).map(sbj => ({
-        ...sbj,
-        id: toValidUuid(sbj.id),
-        school_id: sbj.school_id ? toValidUuid(sbj.school_id) : undefined
-      }));
-      const payments = (await this.fetchPayments()).map(p => ({
-        ...p,
-        id: toValidUuid(p.id),
-        school_id: p.school_id ? toValidUuid(p.school_id) : undefined
-      }));
+      const rawSchools = await this.fetchSchools();
+      const rawStudents = await this.fetchStudents();
+      const rawClasses = await this.fetchClasses();
+      const rawSubjects = await this.fetchSubjects();
+      const rawPayments = await this.fetchPayments();
+
+      const schools = rawSchools.map(sanitizeSchoolForDb);
+      const students = rawStudents.map(sanitizeStudentForDb);
+      const classes = rawClasses.map(sanitizeClassForDb);
+      const subjects = rawSubjects.map(sanitizeSubjectForDb);
+      const payments = rawPayments.map(sanitizePaymentForDb);
 
       const resSchools = await supabase.from('schools').upsert(schools);
       if (resSchools.error) return { success: false, message: `Erreur Écoles (${resSchools.error.code}): ${resSchools.error.message}` };
