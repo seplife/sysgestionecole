@@ -1,43 +1,32 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { School, Organization, AcademicYear } from '../types/database';
-import { supabaseService, getLocalCache, setLocalCache } from '../services/supabaseService';
+import { schoolService } from '../services/supabase';
+import { useAuth } from './AuthContext';
 
-const defaultOrg: Organization = {
-  id: 'org-saint-viateur-01',
-  name: 'GROUPE ÉDUCATION SAINT-VIATEUR',
-  code: 'ORG-ST-VIATEUR',
-  country: 'Côte d\'Ivoire',
-  city: 'Abidjan',
-  plan_type: 'Enterprise',
-  is_active: true,
-  created_at: new Date().toISOString()
-};
+// ─────────────────────────────────────────────────────────────
+// PRÉFÉRENCE UI : école courante sélectionnée (localStorage)
+// Ce n'est PAS une source de vérité — juste la préférence UI
+// ─────────────────────────────────────────────────────────────
+const UI_CURRENT_SCHOOL_KEY = 'sysgestionecole_ui_current_school_id';
 
-const defaultSchool: School = {
-  id: 'school-palmeraie-01',
-  organization_id: 'org-saint-viateur-01',
-  name: 'COLLÈGE CATHOLIQUE SAINT-VIATEUR',
-  slug: 'saint-viateur-palmeraie',
-  status: 'active',
-  registration_number: '000730/MENA',
-  motto: 'Foi, Discipline, Excellence',
-  address: 'Riviera Palmeraie, Rue de la Paix',
-  city: 'Abidjan (Cocody)',
-  phone: '+225 27 22 49 88 00',
-  whatsapp: '+225 07 08 09 10 11',
-  email: 'contact@saintviateur-palmeraie.ci',
-  director_name: 'Père Jean-Luc KOUADIO',
-  school_type: 'Prive',
-  logo_url: '/images/logoecole.png',
-  education_levels: ['Secondaire'],
-  created_at: new Date().toISOString()
-};
+function getSavedSchoolId(): string | null {
+  try { return localStorage.getItem(UI_CURRENT_SCHOOL_KEY); }
+  catch { return null; }
+}
 
+function saveCurrentSchoolId(id: string) {
+  try { localStorage.setItem(UI_CURRENT_SCHOOL_KEY, id); }
+  catch { /* ignore */ }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ANNÉES ACADÉMIQUES (données statiques configurables)
+// ─────────────────────────────────────────────────────────────
 export const availableAcademicYears: AcademicYear[] = [
   {
     id: 'ay-2026-2027',
-    school_id: 'school-palmeraie-01',
-    organization_id: 'org-saint-viateur-01',
+    school_id: '',
+    organization_id: '',
     name: '2026 - 2027',
     start_date: '2026-09-07',
     end_date: '2027-07-16',
@@ -46,8 +35,8 @@ export const availableAcademicYears: AcademicYear[] = [
   },
   {
     id: 'ay-2025-2026',
-    school_id: 'school-palmeraie-01',
-    organization_id: 'org-saint-viateur-01',
+    school_id: '',
+    organization_id: '',
     name: '2025 - 2026',
     start_date: '2025-09-08',
     end_date: '2026-07-15',
@@ -56,8 +45,8 @@ export const availableAcademicYears: AcademicYear[] = [
   },
   {
     id: 'ay-2024-2025',
-    school_id: 'school-palmeraie-01',
-    organization_id: 'org-saint-viateur-01',
+    school_id: '',
+    organization_id: '',
     name: '2024 - 2025',
     start_date: '2024-09-09',
     end_date: '2025-07-11',
@@ -66,17 +55,50 @@ export const availableAcademicYears: AcademicYear[] = [
   }
 ];
 
-const defaultAcademicYear = availableAcademicYears[0]; // 2026 - 2027
+// ─────────────────────────────────────────────────────────────
+// ÉCOLE VIDE (placeholder avant chargement Supabase)
+// ─────────────────────────────────────────────────────────────
+const EMPTY_SCHOOL: School = {
+  id: '',
+  organization_id: '',
+  name: 'Chargement...',
+  slug: '',
+  status: 'active',
+  school_type: 'Prive',
+  city: '',
+  country: 'Côte d\'Ivoire',
+  created_at: new Date().toISOString()
+};
 
+// ─────────────────────────────────────────────────────────────
+// ORGANISATION PAR DÉFAUT (structure SaaS — chargeable depuis Supabase ultérieurement)
+// ─────────────────────────────────────────────────────────────
+const DEFAULT_ORG: Organization = {
+  id: '',
+  name: 'IvoireÉcole+ SaaS',
+  code: 'IVOIREECOLE',
+  country: 'Côte d\'Ivoire',
+  city: 'Abidjan',
+  plan_type: 'Enterprise',
+  is_active: true,
+  created_at: new Date().toISOString()
+};
+
+// ─────────────────────────────────────────────────────────────
+// INTERFACE DU CONTEXTE
+// ─────────────────────────────────────────────────────────────
 interface TenantContextType {
   organization: Organization;
   currentSchool: School;
   schools: School[];
+  schoolsLoading: boolean;
+  schoolsError: string | null;
   setCurrentSchool: (school: School) => void;
-  updateCurrentSchool: (updated: Partial<School>) => void;
-  updateSchool: (id: string, updated: Partial<School>) => void;
-  addNewSchool: (school: School) => void;
-  deleteSchool: (id: string) => void;
+  updateCurrentSchool: (updated: Partial<School>) => Promise<void>;
+  updateSchool: (id: string, updated: Partial<School>) => Promise<void>;
+  addNewSchool: (school: School) => Promise<void>;
+  deleteSchool: (id: string) => Promise<void>;
+  reloadSchools: () => Promise<void>;
   academicYear: AcademicYear;
   academicYears: AcademicYear[];
   setAcademicYear: (ay: AcademicYear) => void;
@@ -84,104 +106,169 @@ interface TenantContextType {
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
+// ─────────────────────────────────────────────────────────────
+// PROVIDER TENANT — SUPABASE RÉEL
+// ─────────────────────────────────────────────────────────────
 export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [organization] = useState<Organization>(() => getLocalCache('organization', defaultOrg));
-  const [schools, setSchools] = useState<School[]>(() => getLocalCache('schools', [defaultSchool]));
-  const [currentSchool, setCurrentSchoolState] = useState<School>(() => {
-    const list = getLocalCache<School[]>('schools', [defaultSchool]);
-    return getLocalCache<School>('current_school', list[0] || defaultSchool);
+  const { isAuthenticated, isSuperAdmin, primarySchoolId } = useAuth();
+
+  const [schools, setSchools] = useState<School[]>([]);
+  const [currentSchool, setCurrentSchoolState] = useState<School>(EMPTY_SCHOOL);
+  const [schoolsLoading, setSchoolsLoading] = useState(false);
+  const [schoolsError, setSchoolsError] = useState<string | null>(null);
+
+  // Année académique : préférence UI uniquement
+  const [academicYear, setAcademicYearState] = useState<AcademicYear>(() => {
+    try {
+      const saved = localStorage.getItem('sysgestionecole_ui_academic_year');
+      if (saved) return JSON.parse(saved);
+    } catch { /* ignore */ }
+    return availableAcademicYears[0];
   });
-  const [academicYear, setAcademicYearState] = useState<AcademicYear>(() => getLocalCache('academic_year', defaultAcademicYear));
 
-  useEffect(() => {
-    supabaseService.fetchSchools().then((data) => {
-      if (data && data.length > 0) {
-        setSchools(data);
-        const currentSaved = getLocalCache<School>('current_school', data[0]);
-        const matched = data.find(s => s.id === currentSaved.id) || data[0];
-        setCurrentSchoolState(matched);
-        setLocalCache('current_school', matched);
+  // ── Charger les écoles depuis Supabase ───────────────────
+  const loadSchools = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setSchoolsLoading(true);
+    setSchoolsError(null);
+
+    try {
+      const data = await schoolService.getAll();
+      setSchools(data);
+
+      if (data.length > 0) {
+        // Restaurer l'école préférée si elle est toujours accessible
+        const savedId = getSavedSchoolId() || primarySchoolId;
+        const preferred = savedId ? data.find(s => s.id === savedId) : null;
+        const selected = preferred || data[0];
+        setCurrentSchoolState(selected);
+        saveCurrentSchoolId(selected.id);
+      } else {
+        setCurrentSchoolState(EMPTY_SCHOOL);
       }
-    });
-  }, []);
+    } catch (e: any) {
+      console.error('[TenantContext] loadSchools error:', e);
+      setSchoolsError(
+        isSuperAdmin
+          ? 'Impossible de charger les écoles. Vérifiez la connexion Supabase.'
+          : 'Votre école n\'est pas accessible. Contactez l\'administrateur.'
+      );
+    } finally {
+      setSchoolsLoading(false);
+    }
+  }, [isAuthenticated, primarySchoolId, isSuperAdmin]);
 
+  // Charger les écoles à l'authentification
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadSchools();
+    } else {
+      // Réinitialiser à la déconnexion
+      setSchools([]);
+      setCurrentSchoolState(EMPTY_SCHOOL);
+      setSchoolsError(null);
+    }
+  }, [isAuthenticated, loadSchools]);
+
+  // ── Changer l'école courante (préférence UI) ─────────────
   const setCurrentSchool = (school: School) => {
     setCurrentSchoolState(school);
-    setLocalCache('current_school', school);
+    saveCurrentSchoolId(school.id);
   };
 
-  const updateCurrentSchool = (updated: Partial<School>) => {
-    const newSchool = { ...currentSchool, ...updated };
-    setCurrentSchoolState(newSchool);
-    let updatedSchools = schools.map(s => s.id === newSchool.id ? newSchool : s);
-    if (!updatedSchools.some(s => s.id === newSchool.id)) {
-      updatedSchools = [newSchool, ...updatedSchools];
+  // ── Mettre à jour l'école courante ───────────────────────
+  const updateCurrentSchool = async (updated: Partial<School>) => {
+    if (!currentSchool.id) return;
+    try {
+      const result = await schoolService.update(currentSchool.id, updated);
+      const newSchool = { ...currentSchool, ...result };
+      setCurrentSchoolState(newSchool);
+      setSchools(prev => prev.map(s => s.id === newSchool.id ? newSchool : s));
+    } catch (e) {
+      console.error('[TenantContext] updateCurrentSchool error:', e);
+      throw e;
     }
-    setSchools(updatedSchools);
-    setLocalCache('schools', updatedSchools);
-    setLocalCache('current_school', newSchool);
-    supabaseService.updateSchoolConfig(newSchool.id, newSchool);
   };
 
-  const updateSchool = (id: string, updated: Partial<School>) => {
-    const updatedSchools = schools.map(s => s.id === id ? { ...s, ...updated } : s);
-    setSchools(updatedSchools);
-    setLocalCache('schools', updatedSchools);
-    if (currentSchool.id === id) {
-      const updatedCurrent = { ...currentSchool, ...updated };
-      setCurrentSchoolState(updatedCurrent);
-      setLocalCache('current_school', updatedCurrent);
+  // ── Mettre à jour une école par ID ───────────────────────
+  const updateSchool = async (id: string, updated: Partial<School>) => {
+    try {
+      const result = await schoolService.update(id, updated);
+      setSchools(prev => prev.map(s => s.id === id ? { ...s, ...result } : s));
+      if (currentSchool.id === id) {
+        setCurrentSchoolState(prev => ({ ...prev, ...result }));
+      }
+    } catch (e) {
+      console.error('[TenantContext] updateSchool error:', e);
+      throw e;
     }
-    supabaseService.updateSchoolConfig(id, updated);
   };
 
-  const addNewSchool = (newSchool: School) => {
-    const updated = [newSchool, ...schools];
-    setSchools(updated);
-    setCurrentSchoolState(newSchool);
-    setLocalCache('schools', updated);
-    setLocalCache('current_school', newSchool);
-    supabaseService.addSchool(newSchool);
-  };
-
-  const deleteSchool = (id: string) => {
-    const updatedSchools = schools.filter(s => s.id !== id);
-    const finalSchools = updatedSchools.length > 0 ? updatedSchools : [defaultSchool];
-    setSchools(finalSchools);
-    setLocalCache('schools', finalSchools);
-
-    if (currentSchool.id === id) {
-      const fallback = finalSchools[0];
-      setCurrentSchoolState(fallback);
-      setLocalCache('current_school', fallback);
+  // ── Ajouter une école ────────────────────────────────────
+  const addNewSchool = async (school: School) => {
+    try {
+      const created = await schoolService.create(school as any);
+      setSchools(prev => [created, ...prev]);
+      setCurrentSchoolState(created);
+      saveCurrentSchoolId(created.id);
+    } catch (e) {
+      console.error('[TenantContext] addNewSchool error:', e);
+      throw e;
     }
-    supabaseService.deleteSchool(id);
   };
 
+  // ── Supprimer une école ──────────────────────────────────
+  const deleteSchool = async (id: string) => {
+    try {
+      await schoolService.delete(id);
+      const remaining = schools.filter(s => s.id !== id);
+      setSchools(remaining);
+
+      if (currentSchool.id === id) {
+        const fallback = remaining[0] || EMPTY_SCHOOL;
+        setCurrentSchoolState(fallback);
+        if (fallback.id) saveCurrentSchoolId(fallback.id);
+      }
+    } catch (e) {
+      console.error('[TenantContext] deleteSchool error:', e);
+      throw e;
+    }
+  };
+
+  // ── Année académique (préférence UI) ─────────────────────
   const setAcademicYear = (ay: AcademicYear) => {
     setAcademicYearState(ay);
-    setLocalCache('academic_year', ay);
+    try { localStorage.setItem('sysgestionecole_ui_academic_year', JSON.stringify(ay)); }
+    catch { /* ignore */ }
   };
 
   return (
-    <TenantContext.Provider value={{
-      organization,
-      currentSchool,
-      schools,
-      setCurrentSchool,
-      updateCurrentSchool,
-      updateSchool,
-      addNewSchool,
-      deleteSchool,
-      academicYear,
-      academicYears: availableAcademicYears,
-      setAcademicYear,
-    }}>
+    <TenantContext.Provider
+      value={{
+        organization: DEFAULT_ORG,
+        currentSchool,
+        schools,
+        schoolsLoading,
+        schoolsError,
+        setCurrentSchool,
+        updateCurrentSchool,
+        updateSchool,
+        addNewSchool,
+        deleteSchool,
+        reloadSchools: loadSchools,
+        academicYear,
+        academicYears: availableAcademicYears,
+        setAcademicYear,
+      }}
+    >
       {children}
     </TenantContext.Provider>
   );
 };
 
+// ─────────────────────────────────────────────────────────────
+// HOOK useTenant
+// ─────────────────────────────────────────────────────────────
 export const useTenant = () => {
   const context = useContext(TenantContext);
   if (!context) {
@@ -189,3 +276,5 @@ export const useTenant = () => {
   }
   return context;
 };
+
+

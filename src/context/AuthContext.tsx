@@ -1,142 +1,202 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { UserProfile, UserRole } from '../types/database';
-import { supabaseService, getLocalCache, setLocalCache } from '../services/supabaseService';
+import {
+  loginWithSupabase,
+  logoutFromSupabase,
+  getCurrentSession,
+  AuthSession,
+} from '../services/authService';
+import { supabase } from '../lib/supabase';
 
-const defaultUser: UserProfile = {
-  id: 'usr-admin-01',
-  first_name: 'Père Jean-Luc',
-  last_name: 'KOUADIO',
-  email: 'directeur@saintviateur.ci',
-  phone: '+225 07 08 09 10 11',
-  role: 'directeur',
-  avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
-  is_active: true
-};
-
+// ─────────────────────────────────────────────────────────────
+// TYPES DU CONTEXTE AUTH
+// ─────────────────────────────────────────────────────────────
 interface AuthContextType {
+  // État
   user: UserProfile | null;
   role: UserRole;
-  setRole: (role: UserRole) => void;
-  switchUserRole: (targetRole: UserRole) => void;
-  updateUser: (fields: Partial<UserProfile>) => void;
-  login: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; message?: string }>;
   isAuthenticated: boolean;
-  logout: () => void;
+  isLoading: boolean;
+  authError: string | null;
+  isSuperAdmin: boolean;
+  primarySchoolId: string | null;
+  memberships: AuthSession['memberships'];
+
+  // Actions
+  login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  logout: () => Promise<void>;
+  updateUser: (fields: Partial<UserProfile>) => void;
+  setRole: (role: UserRole) => void;          // Conservé pour compatibilité UI
+  switchUserRole: (role: UserRole) => void;   // Conservé pour compatibilité UI
+  clearAuthError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// ─────────────────────────────────────────────────────────────
+// PROVIDER AUTH — SUPABASE AUTH RÉEL
+// ─────────────────────────────────────────────────────────────
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    const cached = getLocalCache<UserProfile | null>('user', null);
-    if (cached?.id === 'usr-admin-01') {
-      localStorage.removeItem('sysgestionecole_user');
-      return null;
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [role, setRoleState] = useState<UserRole>('directeur');
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [primarySchoolId, setPrimarySchoolId] = useState<string | null>(null);
+  const [memberships, setMemberships] = useState<AuthSession['memberships']>([]);
+  const [isLoading, setIsLoading] = useState(true); // true au démarrage pendant vérification session
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // ── Appliquer une session complète dans le state ──────────
+  const applySession = useCallback((session: AuthSession | null) => {
+    if (!session) {
+      setUser(null);
+      setRoleState('directeur');
+      setIsSuperAdmin(false);
+      setPrimarySchoolId(null);
+      setMemberships([]);
+      return;
     }
-    return cached;
-  });
 
-  const [role, setRoleState] = useState<UserRole>(user?.role || 'directeur');
+    setUser(session.profile);
+    setRoleState(session.primaryRole);
+    setIsSuperAdmin(session.isSuperAdmin);
+    setPrimarySchoolId(session.primarySchoolId);
+    setMemberships(session.memberships);
+  }, []);
 
+  // ── Restaurer la session au démarrage de l'application ───
   useEffect(() => {
-    if (user) {
-      setLocalCache('user', user);
-      setRoleState(user.role);
-    }
-  }, [user]);
+    let mounted = true;
 
-  const login = async (usernameOrEmail: string, password: string): Promise<{ success: boolean; message?: string }> => {
-    const cleanUsername = usernameOrEmail.trim().toLowerCase();
-
-    // Account role mapping strategy
-    let targetRole: UserRole = 'directeur';
-    let firstName = 'Père Jean-Luc';
-    let lastName = 'KOUADIO';
-
-    if (cleanUsername.includes('superadmin') || cleanUsername.includes('super')) {
-      targetRole = 'super_admin';
-      firstName = 'Administrateur';
-      lastName = 'SaaS Global';
-    } else if (cleanUsername.includes('prof') || cleanUsername.includes('enseignant') || cleanUsername.includes('kouadio')) {
-      targetRole = 'enseignant';
-      firstName = 'Dr. Yao';
-      lastName = 'KOUADIO';
-    } else if (cleanUsername.includes('parent') || cleanUsername.includes('diabate')) {
-      targetRole = 'parent';
-      firstName = 'Ibrahim';
-      lastName = 'DIABATÉ';
-    } else if (cleanUsername.includes('eleve') || cleanUsername.includes('student')) {
-      targetRole = 'eleve';
-      firstName = 'Awa Fatima';
-      lastName = 'DIABATÉ';
-    }
-
-    const authenticatedUser: UserProfile = {
-      id: `usr-${Date.now()}`,
-      first_name: firstName,
-      last_name: lastName,
-      email: usernameOrEmail,
-      phone: '+225 07 08 09 10 11',
-      role: targetRole,
-      avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
-      is_active: true
+    const initSession = async () => {
+      setIsLoading(true);
+      const session = await getCurrentSession();
+      if (mounted) {
+        applySession(session);
+        setIsLoading(false);
+      }
     };
 
-    setUser(authenticatedUser);
-    setRoleState(targetRole);
-    setLocalCache('user', authenticatedUser);
+    initSession();
 
-    return { success: true };
-  };
+    // Écouter les changements de session Supabase Auth (refresh, logout, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, supabaseSession) => {
+        if (!mounted) return;
 
-  const setRole = (newRole: UserRole) => {
-    setRoleState(newRole);
-    if (user) {
-      const updated = { ...user, role: newRole };
-      setUser(updated);
-      setLocalCache('user', updated);
+        if (event === 'SIGNED_OUT' || !supabaseSession) {
+          applySession(null);
+          setIsLoading(false);
+          return;
+        }
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          setIsLoading(true);
+          const session = await getCurrentSession();
+          if (mounted) {
+            applySession(session);
+            setIsLoading(false);
+          }
+        }
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [applySession]);
+
+  // ── LOGIN ─────────────────────────────────────────────────
+  const login = async (email: string, password: string) => {
+    setAuthError(null);
+    setIsLoading(true);
+
+    try {
+      const result = await loginWithSupabase(email, password);
+
+      if (!result.success) {
+        setAuthError(result.message || 'Connexion échouée.');
+        setIsLoading(false);
+        return { success: false, message: result.message };
+      }
+
+      if (result.session) {
+        applySession(result.session);
+      }
+      setIsLoading(false);
+      return { success: true };
+    } catch (e: any) {
+      const msg = 'Erreur inattendue lors de la connexion.';
+      setAuthError(msg);
+      setIsLoading(false);
+      return { success: false, message: msg };
     }
   };
 
-  const switchUserRole = (targetRole: UserRole) => {
-    if (user) {
-      const updated = { ...user, role: targetRole };
-      setUser(updated);
-      setRoleState(targetRole);
-      setLocalCache('user', updated);
-    }
+  // ── LOGOUT ────────────────────────────────────────────────
+  const logout = async () => {
+    setIsLoading(true);
+    await logoutFromSupabase();
+    applySession(null);
+    setIsLoading(false);
   };
 
+  // ── MISE À JOUR DU PROFIL (locale + Supabase) ─────────────
   const updateUser = (fields: Partial<UserProfile>) => {
     if (user) {
       const updated = { ...user, ...fields };
       setUser(updated);
-      setLocalCache('user', updated);
-      supabaseService.saveStaff(updated);
+      // Sync vers Supabase (best-effort, sans bloquer l'UI)
+      supabase
+        .from('user_profiles')
+        .update(fields)
+        .eq('id', user.id)
+        .then(({ error }) => {
+          if (error) console.warn('[AuthContext] Profile update error:', error);
+        });
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('sysgestionecole_user');
-    setUser(null);
+  // ── COMPATIBILITÉ UI (changement de rôle d'affichage) ────
+  const setRole = (newRole: UserRole) => {
+    setRoleState(newRole);
+    if (user) setUser({ ...user, role: newRole });
   };
 
+  const switchUserRole = (targetRole: UserRole) => {
+    setRoleState(targetRole);
+    if (user) setUser({ ...user, role: targetRole });
+  };
+
+  const clearAuthError = () => setAuthError(null);
+
   return (
-    <AuthContext.Provider value={{
-      user,
-      role,
-      setRole,
-      switchUserRole,
-      updateUser,
-      login,
-      isAuthenticated: !!user,
-      logout
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        role,
+        isAuthenticated: !!user && !isLoading,
+        isLoading,
+        authError,
+        isSuperAdmin,
+        primarySchoolId,
+        memberships,
+        login,
+        logout,
+        updateUser,
+        setRole,
+        switchUserRole,
+        clearAuthError,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
+// ─────────────────────────────────────────────────────────────
+// HOOK useAuth
+// ─────────────────────────────────────────────────────────────
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -144,3 +204,6 @@ export const useAuth = () => {
   }
   return context;
 };
+
+
+

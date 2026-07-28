@@ -454,14 +454,17 @@ export const supabaseService = {
   async fetchStudents(): Promise<Student[]> {
     try {
       const { data, error } = await supabase.from('students').select('*').order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
-        setLocalCache('students', data);
-        return data as Student[];
+      if (error) {
+        console.warn('[Supabase Fetch Students Error]:', error.code, error.message);
+        return getLocalCache('students', []);
       }
+      const result = (data as Student[]) || [];
+      setLocalCache('students', result);
+      return result;
     } catch (e) {
-      console.warn('[Supabase Fetch Students Error]:', e);
+      console.warn('[Supabase Fetch Students Exception]:', e);
+      return getLocalCache('students', []);
     }
-    return getLocalCache('students', initialStudents);
   },
 
   async saveStudent(student: Partial<Student>) {
@@ -524,28 +527,17 @@ export const supabaseService = {
   async fetchParents(): Promise<Parent[]> {
     try {
       const { data, error } = await supabase.from('parents').select('*').order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
-        setLocalCache('parents', data);
-        return data as Parent[];
+      if (error) {
+        console.warn('[Supabase Fetch Parents Error]:', error.code, error.message);
+        return getLocalCache('parents', []);
       }
+      const result = (data as Parent[]) || [];
+      setLocalCache('parents', result);
+      return result;
     } catch (e) {
-      console.warn('[Supabase Fetch Parents Error]:', e);
+      console.warn('[Supabase Fetch Parents Exception]:', e);
+      return getLocalCache('parents', []);
     }
-    return getLocalCache('parents', [
-      {
-        id: 'prt-01',
-        organization_id: 'org-saint-viateur-01',
-        school_id: 'school-palmeraie-01',
-        first_name: 'Ibrahim',
-        last_name: 'DIABATÉ',
-        phone: '+225 07 09 88 77 66',
-        whatsapp: '+225 07 09 88 77 66',
-        email: 'i.diabate@gmail.com',
-        profession: 'Ingénieur Télécom (Orange CI)',
-        address: 'Riviera Palmeraie, Abidjan',
-        children: [initialStudents[0]]
-      }
-    ]);
   },
 
   async saveParent(parent: Partial<Parent>) {
@@ -588,14 +580,17 @@ export const supabaseService = {
   async fetchStaff(): Promise<UserProfile[]> {
     try {
       const { data, error } = await supabase.from('user_profiles').select('*').order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
-        setLocalCache('staff', data);
-        return data as UserProfile[];
+      if (error) {
+        console.warn('[Supabase Fetch Staff Error]:', error.code, error.message);
+        return getLocalCache('staff', []);
       }
+      const result = (data as UserProfile[]) || [];
+      setLocalCache('staff', result);
+      return result;
     } catch (e) {
-      console.warn('[Supabase Fetch Staff Error]:', e);
+      console.warn('[Supabase Fetch Staff Exception]:', e);
+      return getLocalCache('staff', []);
     }
-    return getLocalCache('staff', initialStaff);
   },
 
   async saveStaff(staff: Partial<UserProfile>) {
@@ -699,14 +694,17 @@ export const supabaseService = {
   async fetchSubjects(): Promise<Subject[]> {
     try {
       const { data, error } = await supabase.from('subjects').select('*').order('code');
-      if (!error && data && data.length > 0) {
-        setLocalCache('subjects', data);
-        return data as Subject[];
+      if (error) {
+        console.warn('[Supabase Fetch Subjects Error]:', error.code, error.message);
+        return getLocalCache('subjects', []);
       }
+      const result = (data as Subject[]) || [];
+      setLocalCache('subjects', result);
+      return result;
     } catch (e) {
-      console.warn('[Supabase Fetch Subjects Error]:', e);
+      console.warn('[Supabase Fetch Subjects Exception]:', e);
+      return getLocalCache('subjects', []);
     }
-    return getLocalCache('subjects', initialSubjects);
   },
 
   async saveSubject(sbj: Partial<Subject>) {
@@ -848,14 +846,17 @@ export const supabaseService = {
   async fetchPayments(): Promise<PaymentTransaction[]> {
     try {
       const { data, error } = await supabase.from('payment_transactions').select('*').order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
-        setLocalCache('payments', data);
-        return data as PaymentTransaction[];
+      if (error) {
+        console.warn('[Supabase Fetch Payments Error]:', error.code, error.message);
+        return getLocalCache('payments', []);
       }
+      const result = (data as PaymentTransaction[]) || [];
+      setLocalCache('payments', result);
+      return result;
     } catch (e) {
-      console.warn('[Supabase Fetch Payments Error]:', e);
+      console.warn('[Supabase Fetch Payments Exception]:', e);
+      return getLocalCache('payments', []);
     }
-    return getLocalCache('payments', initialPayments);
   },
 
   async savePayment(payment: Partial<PaymentTransaction>) {
