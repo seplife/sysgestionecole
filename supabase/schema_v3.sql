@@ -278,3 +278,19 @@ BEGIN
         EXECUTE format('ALTER TABLE public.%I DISABLE ROW LEVEL SECURITY;', t);
     END LOOP;
 END $$;
+
+-- ------------------------------------------------------------
+-- 9. PERMISSIONS DE RÔLES SUPABASE & RECHARGEMENT DU SCHEMA CACHE (Fix HTTP 500)
+-- ------------------------------------------------------------
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role, postgres;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role, postgres;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role, postgres;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role, postgres;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role, postgres;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role, postgres;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role, postgres;
+
+-- Forcer le rechargement immédiat du cache API PostgREST
+NOTIFY pgrst, 'reload schema';
