@@ -1,3 +1,8 @@
+// ============================================================
+// TYPAGE BASE DE DONNÉES SUPABASE — IVOIREÉCOLE+ (SaaS Multi-Tenant)
+// Alignement strict avec PostgreSQL & Supabase Engine
+// ============================================================
+
 export type UserRole =
   | 'super_admin'
   | 'admin_org'
@@ -18,7 +23,10 @@ export type UserRole =
 
 export type SchoolStatus = 'pending' | 'active' | 'suspended' | 'blocked' | 'cancelled';
 export type SubscriptionStatus = 'pending_payment' | 'trialing' | 'active' | 'past_due' | 'expired' | 'cancelled' | 'suspended';
-export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'refunded' | 'cancelled';
+export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+export type PaymentMethod = 'orange_money' | 'mtn_momo' | 'moov_money' | 'wave' | 'card' | 'bank_transfer' | 'cash';
+export type StudentStatus = 'Inscrit' | 'Reinscrit' | 'Transfere' | 'Radie';
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 
 export type AccessErrorCode =
   | 'ACCESS_GRANTED'
@@ -54,13 +62,264 @@ export interface AccessCheckResult {
   max_students?: number;
 }
 
+// ------------------------------------------------------------
+// MODÈLES PRINCIPAUX DU SCHÉMA POSTGRESQL SUPABASE
+// ------------------------------------------------------------
+
+export interface Organization {
+  id: string;
+  name: string;
+  code: string;
+  logo_url?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  country: string;
+  city: string;
+  plan_type: 'Starter' | 'Standard' | 'Premium' | 'Enterprise';
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface School {
+  id: string;
+  organization_id?: string | null;
+  name: string;
+  slug: string;
+  registration_number?: string | null;
+  motto?: string | null;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  phone?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+  website?: string | null;
+  director_name?: string | null;
+  logo_url?: string | null;
+  school_type: 'Public' | 'Prive' | 'Confessionnel';
+  status: SchoolStatus;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface UserProfile {
+  id: string; // Fait référence à auth.users.id
+  first_name: string;
+  last_name: string;
+  email?: string | null;
+  phone?: string | null;
+  avatar_url?: string | null;
+  role?: UserRole;
+  subject_name?: string | null;
+  is_active: boolean;
+  last_login?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SchoolMember {
+  id: string;
+  school_id: string;
+  user_id: string;
+  role: UserRole;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AcademicYear {
+  id: string;
+  school_id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  is_current: boolean;
+  created_at?: string;
+}
+
+export interface AcademicTerm {
+  id: string;
+  school_id: string;
+  academic_year_id: string;
+  name: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  created_at?: string;
+}
+
+export interface SchoolClass {
+  id: string;
+  school_id: string;
+  academic_year_id?: string | null;
+  name: string;
+  level?: string | null;
+  capacity?: number | null;
+  created_at?: string;
+  updated_at?: string;
+
+  // Propriétés calculées dynamiquement pour le frontend
+  student_count?: number;
+  main_teacher_name?: string;
+}
+
+export interface Subject {
+  id: string;
+  school_id: string;
+  name: string;
+  code?: string | null;
+  coefficient: number;
+  category?: string | null;
+  level_name?: string | null;
+  created_at?: string;
+}
+
+export interface ClassSubject {
+  id: string;
+  class_id: string;
+  subject_id: string;
+  teacher_id?: string | null;
+  coefficient: number;
+  created_at?: string;
+}
+
+export interface Student {
+  id: string;
+  school_id: string;
+  user_id?: string | null;
+  organization_id?: string | null;
+  registration_number: string;
+  first_name: string;
+  last_name: string;
+  date_of_birth?: string | null;
+  place_of_birth?: string | null;
+  gender?: 'M' | 'F' | null;
+  nationality?: string | null;
+  photo_url?: string | null;
+  status: StudentStatus;
+  deleted_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+
+  // DTO Joins dynamiques pour la UI
+  current_class_name?: string;
+  current_class_id?: string;
+  parents?: Parent[];
+}
+
+export interface Parent {
+  id: string;
+  school_id: string;
+  user_id?: string | null;
+  first_name: string;
+  last_name: string;
+  phone?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+  address?: string | null;
+  profession?: string | null;
+  created_at?: string;
+
+  // DTO Joins
+  children?: Student[];
+}
+
+export interface StudentGuardian {
+  id: string;
+  school_id: string;
+  student_id: string;
+  parent_id: string;
+  relationship?: string | null;
+  is_primary_contact: boolean;
+  created_at?: string;
+}
+
+export interface Teacher {
+  id: string;
+  school_id: string;
+  user_id?: string | null;
+  first_name: string;
+  last_name: string;
+  email?: string | null;
+  phone?: string | null;
+  specialization?: string | null;
+  hire_date?: string | null;
+  status: 'active' | 'inactive' | 'on_leave';
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  school_id: string;
+  student_id: string;
+  class_id: string;
+  academic_term_id?: string | null;
+  date: string;
+  status: AttendanceStatus;
+  reason?: string | null;
+  created_by?: string | null;
+  created_at?: string;
+
+  // DTO Joins
+  student_name?: string;
+  class_name?: string;
+}
+
+export interface Assessment {
+  id: string;
+  school_id: string;
+  class_subject_id?: string | null;
+  academic_term_id?: string | null;
+  name: string;
+  type: 'test' | 'exam' | 'quiz' | 'homework' | 'project';
+  coefficient: number;
+  max_score: number;
+  date?: string | null;
+  created_at?: string;
+}
+
+export interface Grade {
+  id: string;
+  school_id: string;
+  assessment_id: string;
+  student_id: string;
+  score?: number | null;
+  comment?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PaymentTransaction {
+  id: string;
+  school_id: string;
+  student_id: string;
+  fee_type_id?: string | null;
+  amount: number;
+  currency: string;
+  payment_method: PaymentMethod | string;
+  reference?: string | null;
+  status: PaymentStatus | string;
+  payment_date: string;
+  description?: string | null;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+
+  // DTO Joins
+  student_name?: string;
+  receipt_number?: string;
+  payer_name?: string;
+  payer_phone?: string;
+  transaction_id?: string;
+}
+
 export interface SaasPlan {
   id: string;
   name: string;
   slug: string;
-  description?: string;
+  description?: string | null;
   price: number;
-  currency?: string;
+  currency: string;
   billing_interval: 'monthly' | 'yearly';
   max_students?: number | null;
   max_teachers?: number | null;
@@ -74,599 +333,144 @@ export interface SaasSubscriptionRecord {
   id: string;
   school_id: string;
   plan_id: string;
-  plan_name?: string;
   status: SubscriptionStatus;
-  starts_at?: string;
-  expires_at?: string;
-  trial_ends_at?: string;
-  cancelled_at?: string;
-  created_at?: string;
-}
-
-export interface SaasPaymentRecord {
-  id: string;
-  school_id: string;
-  subscription_id?: string;
-  amount: number;
-  currency: string;
-  payment_method: 'orange_money' | 'mtn_momo' | 'moov_money' | 'wave' | 'card' | 'bank_transfer' | 'cash';
-  transaction_reference: string;
-  status: PaymentStatus;
-  paid_at?: string;
-  created_at?: string;
-}
-
-export interface UserProfile {
-  id: string;
-  user_id?: string;
-  organization_id?: string;
-  school_id?: string;
-  first_name: string;
-  last_name: string;
-  email?: string;
-  phone?: string;
-  avatar_url?: string;
-  role: UserRole;
-  subject_name?: string;
-  is_active: boolean;
-  last_login?: string;
+  starts_at: string;
+  expires_at?: string | null;
+  trial_ends_at?: string | null;
+  cancelled_at?: string | null;
   created_at?: string;
   updated_at?: string;
 }
 
-export interface Organization {
+// ------------------------------------------------------------
+// TYPES DE BUDGET ET PAIE COMPATIBLES
+// ------------------------------------------------------------
+
+export interface CostCenter {
   id: string;
-  name: string;
+  school_id: string;
   code: string;
-  logo_url?: string;
-  phone?: string;
-  email?: string;
-  country: string;
-  city: string;
-  plan_type: 'Starter' | 'Standard' | 'Premium' | 'Enterprise';
-  is_active: boolean;
-  created_at: string;
-}
-
-export interface School {
-  id: string;
-  organization_id?: string;
   name: string;
-  slug?: string;
-  registration_number?: string;
-  motto?: string;
-  address?: string;
-  city?: string;
-  country?: string;
-  phone?: string;
-  whatsapp?: string;
-  email?: string;
-  website?: string;
-  director_name?: string;
-  logo_url?: string;
-  school_type: 'Public' | 'Prive' | 'Confessionnel';
-  status?: SchoolStatus;
-  education_levels?: string[];
-  created_at?: string;
-  updated_at?: string;
+  description?: string;
+  manager_name?: string;
+  is_active: boolean;
 }
 
-export interface AcademicYear {
+export interface BudgetPeriod {
   id: string;
   school_id: string;
-  organization_id?: string;
   name: string;
   start_date: string;
   end_date: string;
-  is_current: boolean;
-  is_archived?: boolean;
-  created_at?: string;
-}
-
-export interface AcademicTerm {
-  id: string;
-  school_id: string;
-  academic_year_id: string;
-  name: string;
-  period_type?: 'Trimestre' | 'Semestre';
-  start_date?: string;
-  end_date?: string;
-  weight?: number;
-  created_at?: string;
-}
-
-export interface Student {
-  id: string;
-  school_id: string;
-  organization_id?: string;
-  user_id?: string;
-  registration_number: string;
-  first_name: string;
-  last_name: string;
-  date_of_birth?: string;
-  place_of_birth?: string;
-  gender?: 'M' | 'F';
-  nationality?: string;
-  photo_url?: string;
-  blood_group?: string;
-  medical_conditions?: string;
-  status: 'Inscrit' | 'Reinscrit' | 'Transfere' | 'Radie';
-  current_class_name?: string;
-  address?: string;
-  parents?: Parent[];
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Parent {
-  id: string;
-  school_id: string;
-  organization_id?: string;
-  user_id?: string;
-  first_name: string;
-  last_name: string;
-  phone?: string;
-  whatsapp?: string;
-  email?: string;
-  profession?: string;
-  address?: string;
-  children?: Student[];
-  created_at?: string;
-}
-
-export interface Level {
-  id: string;
-  school_id: string;
-  name: string;
-  cycle: 'Prescolaire' | 'Primaire' | 'Secondaire_Premier_Cycle' | 'Secondaire_Second_Cycle';
-  order_index: number;
-}
-
-export interface SchoolClass {
-  id: string;
-  school_id: string;
-  academic_year_id?: string;
-  level_id?: string;
-  level_name?: string;
-  level?: string;
-  name: string;
-  room_number?: string;
-  capacity?: number;
-  student_count?: number;
-  main_teacher_name?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Subject {
-  id: string;
-  school_id: string;
-  name: string;
-  code?: string;
-  coefficient?: number;
-  category?: string;
-  level_name?: string;
-  created_at?: string;
-}
-
-export interface ClassSubject {
-  id: string;
-  class_id: string;
-  subject_id: string;
-  teacher_id?: string;
-  coefficient?: number;
-  created_at?: string;
-}
-
-export interface Assessment {
-  id: string;
-  school_id: string;
-  class_subject_id?: string;
-  academic_term_id?: string;
-  class_id?: string;
-  subject_id?: string;
-  subject_name?: string;
-  title?: string;
-  name?: string;
-  type?: 'test' | 'exam' | 'quiz' | 'homework' | 'project';
-  assessment_type?: 'Interrogation' | 'Devoir' | 'Composition' | 'Examen';
-  coefficient?: number;
-  max_score?: number;
-  weight?: number;
-  date?: string;
-  date_given?: string;
-  created_at?: string;
-}
-
-export interface Grade {
-  id: string;
-  school_id: string;
-  assessment_id?: string;
-  student_id: string;
-  student_name?: string;
-  matricule?: string;
-  class_name?: string;
-  subject_name?: string;
-  score?: number;
-  comment?: string;
-  int1?: number;
-  int2?: number;
-  int3?: number;
-  int4?: number;
-  ds1?: number;
-  ds2?: number;
-  ds3?: number;
-  dn?: number;
-  subject_average?: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface SubjectGradeSummary {
-  subject_name: string;
-  coefficient: number;
-  teacher_name: string;
-  scores: number[];
-  average: number;
-  rank: number;
-  appreciation: string;
-}
-
-export interface ReportCard {
-  id: string;
-  school_id: string;
-  student_id: string;
-  class_id?: string;
-  academic_term_id?: string;
-  student_name?: string;
-  registration_number?: string;
-  class_name?: string;
-  academic_term_name?: string;
-  academic_year_name?: string;
-  overall_average?: number;
-  class_average?: number;
-  highest_average?: number;
-  lowest_average?: number;
-  total_score?: number;
-  average?: number;
-  rank?: number;
-  total_students?: number;
-  absences_count?: number;
-  late_count?: number;
-  subject_summaries?: SubjectGradeSummary[];
-  general_appreciation?: string;
-  appreciation?: string;
-  council_decision?: string;
-  principal_signature?: string;
-  is_published?: boolean;
-  published?: boolean;
-  published_at?: string;
-  date_generated?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface AttendanceRecord {
-  id: string;
-  school_id: string;
-  student_id: string;
-  class_id: string;
-  academic_term_id?: string;
-  date: string;
-  status: 'present' | 'absent' | 'late' | 'excused' | 'Present' | 'Absent' | 'Retard' | 'Excuse';
-  reason?: string;
-  minutes_late?: number;
-  is_justified?: boolean;
-  student_name?: string;
-  class_name?: string;
-  created_at?: string;
-}
-
-export interface StudentFee {
-  id: string;
-  school_id: string;
-  student_id: string;
-  student_name: string;
-  category_name: string;
-  total_amount: number;
-  discount_amount: number;
-  paid_amount: number;
-  due_date: string;
-  status: 'Impaye' | 'Partiel' | 'Paye';
-}
-
-export interface PaymentTransaction {
-  id: string;
-  school_id: string;
-  student_id?: string;
-  student_name?: string;
-  fee_type_id?: string;
-  receipt_number?: string;
-  reference?: string;
-  amount: number;
-  currency?: string;
-  payment_method: string;
-  transaction_id?: string;
-  payer_phone?: string;
-  payer_name?: string;
   status: string;
-  payment_date?: string;
-  description?: string;
-  created_by?: string;
-  created_at?: string;
-  updated_at?: string;
 }
 
-export interface CommunicationLog {
+export interface BudgetCategory {
   id: string;
   school_id: string;
-  target_group?: string;
-  recipient_phone?: string;
-  recipient_name?: string;
-  channel?: string;
-  subject?: string;
-  content?: string;
-  message_text?: string;
-  status?: string;
-  created_at?: string;
+  type: 'depense' | 'recette';
+  code: string;
+  name: string;
 }
 
-export interface AuditLog {
+export interface Budget {
   id: string;
-  school_id?: string;
-  user_id?: string;
-  action: string;
-  entity_type?: string;
-  entity_id?: string;
-  old_data?: Record<string, any>;
-  new_data?: Record<string, any>;
-  metadata?: Record<string, any>;
-  ip_address?: string;
-  user_agent?: string;
-  created_at?: string;
-}
-
-export interface SaasSubscription {
-  id: string;
-  organization_name: string;
-  school_count: number;
-  student_count: number;
-  plan_name: 'Starter' | 'Standard' | 'Premium' | 'Enterprise';
-  mrr_fcfa: number;
-  status: 'Actif' | 'Essai' | 'En retard' | 'Suspendu';
-  next_billing_date: string;
-}
-
-export interface BookItem {
-  id: string;
-  isbn: string;
+  school_id: string;
+  budget_period_id: string;
+  cost_center_id: string;
+  cost_center_name?: string;
   title: string;
-  author: string;
-  category: string;
-  level_target?: string;
-  condition?: 'Neuf' | 'Bon état' | 'Usagé' | 'À remplacer';
-  totalQuantity: number;
-  availableQuantity: number;
-  created_at?: string;
+  total_planned: number;
+  total_committed: number;
+  total_consumed: number;
 }
 
-export interface BookLoan {
+export interface BudgetLine {
   id: string;
-  book_id: string;
-  book_title: string;
-  student_id?: string;
-  student_name: string;
-  student_matricule: string;
-  class_name: string;
-  loan_date: string;
-  due_date: string;
-  return_date?: string | null;
-  status: 'En cours' | 'Restitué' | 'En retard' | 'Perdu / Endommagé';
-  notes?: string;
-  created_at?: string;
+  budget_id: string;
+  category_id: string;
+  category_name?: string;
+  planned_amount: number;
+  consumed_amount: number;
 }
 
-// Module Examens & Distinctions
-export type ExamStatus = 'draft' | 'in_progress' | 'completed' | 'published';
-export type ExamType = 'BEPC_BLANC' | 'BAC_BLANC' | 'DEVOIR_NATIONALE' | 'COMPOSITION_BLANCHE' | 'AUTRE';
-export type AwardType = 'BEST_STUDENT' | 'BEST_PROGRESSION' | 'BEST_IN_SUBJECT' | 'HONOR_ROLL' | 'EXCELLENCE';
-
-export interface Exam {
+export interface Expense {
   id: string;
   school_id: string;
-  academic_year_id: string;
-  academic_term_id?: string;
-  name: string;
-  exam_type: ExamType | string;
-  level_id: string; // e.g. '3ème', 'Terminale'
-  class_id?: string;
-  series_id?: string; // 'A', 'C', 'D', 'G', etc.
-  start_date?: string;
-  end_date?: string;
-  status: ExamStatus;
-  created_by?: string;
-  created_at?: string;
-  subjects_count?: number;
-  candidates_count?: number;
+  budget_line_id: string;
+  amount: number;
+  date: string;
+  recipient: string;
+  description: string;
+  status: string;
 }
 
-export interface OfficialExam {
+export interface Revenue {
   id: string;
-  code: 'BAC' | 'BEPC' | string;
-  name: string;
-  level_code: 'TERMINALE' | 'TROISIEME' | string;
-  description?: string;
+  school_id: string;
+  budget_line_id: string;
+  amount: number;
+  date: string;
+  source: string;
+  description: string;
+}
+
+export interface Employee {
+  id: string;
+  school_id: string;
+  employee_number: string;
+  first_name: string;
+  last_name: string;
+  role?: string;
+  email?: string;
+  phone?: string;
   is_active: boolean;
-  created_at?: string;
 }
 
-export interface OfficialSeries {
+export interface EmployeePayrollProfile {
   id: string;
-  exam_id: string;
-  code: 'SERIE_A' | 'SERIE_D' | 'BEPC_GEN' | string;
+  employee_id: string;
+  base_salary: number;
+  housing_allowance?: number;
+  transport_allowance?: number;
+  social_security_number?: string;
+}
+
+export interface PayrollComponent {
+  id: string;
   name: string;
-  total_mandatory_coefficients: number;
-  max_mandatory_points: number;
-  display_order: number;
+  type: 'gain' | 'retenue';
+  is_taxable: boolean;
+  is_subject_to_cnps: boolean;
 }
 
-export interface OfficialSubject {
+export interface PayslipItem {
   id: string;
-  code: string;
-  name: string;
-  short_name?: string;
-  category?: string;
+  payslip_id: string;
+  component_id: string;
+  amount: number;
 }
 
-export interface OfficialExamSubject {
+export interface Payslip {
   id: string;
-  exam_id: string;
-  series_id: string;
-  subject_id: string;
-  code: string;
-  libelle: string;
-  coefficient: number;
-  type: 'ecrit' | 'oral' | 'pratique' | 'facultatif';
-  is_mandatory: boolean;
-  is_bonus: boolean;
-  max_score: number;
-  display_order: number;
+  employee_id: string;
+  period: string;
+  gross_salary: number;
+  net_salary: number;
+  payment_date: string;
 }
 
-export interface ExamSubject {
-  id: string;
-  school_id: string;
-  exam_id: string;
-  subject_id: string;
-  subject_name?: string;
-  coefficient: number;
-  max_score: number;
-  is_optional: boolean;
-  type?: 'ecrit' | 'oral' | 'pratique' | 'facultatif';
-  is_bonus?: boolean;
-  code?: string;
-}
+// ------------------------------------------------------------
+// TYPES DE CRÉATION (INSERT DTO) & MISE À JOUR (UPDATE DTO)
+// ------------------------------------------------------------
 
-export interface ExamCandidate {
-  id: string;
-  school_id: string;
-  exam_id: string;
-  student_id: string;
-  candidate_number?: string;
-  class_id: string;
-  student_name?: string;
-  class_name?: string;
-  registration_number?: string;
-  created_at?: string;
-}
-
-export interface ExamGrade {
-  id: string;
-  school_id: string;
-  exam_id: string;
-  student_id: string;
-  subject_id: string;
-  score?: number | null;
-  is_absent?: boolean;
-  entered_by?: string;
-  updated_at?: string;
-}
-
-export interface ExamResult {
-  id: string;
-  school_id: string;
-  exam_id: string;
-  student_id: string;
-  student_name?: string;
-  registration_number?: string;
-  class_name?: string;
-  level_name?: string;
-  total_points: number;
-  total_coefficients: number;
-  average: number;
-  rank: number;
-  rank_level: number;
-  mention: string; // 'Très Bien', 'Bien', 'Assez Bien', 'Passable', 'Ajourné'
-  result_status: 'ADMIS' | 'REFUSÉ' | 'ABSENT';
-  created_at?: string;
-}
-
-export interface HonorRollConfig {
-  id: string;
-  school_id: string;
-  title: string;
-  min_average: number;
-  max_average?: number;
-  created_at?: string;
-}
-
-export interface HonorRoll {
-  id: string;
-  school_id: string;
-  academic_year_id: string;
-  academic_term_id?: string;
-  period_type: 'monthly' | 'term' | 'annual';
-  title: string;
-  created_at?: string;
-  entries_count?: number;
-}
-
-export interface HonorRollEntry {
-  id: string;
-  honor_roll_id: string;
-  student_id: string;
-  student_name?: string;
-  registration_number?: string;
-  class_id: string;
-  class_name?: string;
-  average: number;
-  distinction_level: string;
-  rank?: number;
-}
-
-export interface Award {
-  id: string;
-  school_id: string;
-  student_id: string;
-  student_name?: string;
-  registration_number?: string;
-  class_name?: string;
-  award_type: AwardType | string;
-  subject_id?: string;
-  subject_name?: string;
-  title: string;
-  description?: string;
-  academic_year_id: string;
-  academic_term_id?: string;
-  average?: number;
-  progression_delta?: number;
-  rank?: number;
-  awarded_at?: string;
-}
-
-export interface Certificate {
-  id: string;
-  school_id: string;
-  student_id: string;
-  student_name?: string;
-  registration_number?: string;
-  class_name?: string;
-  exam_id?: string;
-  exam_name?: string;
-  certificate_number: string;
-  certificate_type: 'EXAM_SUCCESS' | 'EXCELLENCE' | 'HONOR' | 'PROGRESSION' | string;
-  title: string;
-  average?: number;
-  rank?: number;
-  mention?: string;
-  pdf_url?: string;
-  verification_code: string;
-  issued_at?: string;
-  issued_by?: string;
-}
-
-export * from './hr';
-export * from './payroll';
-export * from './budget';
-
-
+export type SchoolInsert = Omit<School, 'id' | 'created_at' | 'updated_at'> & { id?: string };
+export type StudentInsert = Omit<Student, 'id' | 'created_at' | 'updated_at' | 'current_class_name' | 'current_class_id' | 'parents'> & { id?: string };
+export type ClassInsert = Omit<SchoolClass, 'id' | 'created_at' | 'updated_at' | 'student_count' | 'main_teacher_name'> & { id?: string };
+export type SubjectInsert = Omit<Subject, 'id' | 'created_at'> & { id?: string };
+export type ParentInsert = Omit<Parent, 'id' | 'created_at' | 'children'> & { id?: string };
+export type TeacherInsert = Omit<Teacher, 'id' | 'created_at' | 'updated_at'> & { id?: string };
+export type AttendanceInsert = Omit<AttendanceRecord, 'id' | 'created_at' | 'student_name' | 'class_name'> & { id?: string };
+export type AssessmentInsert = Omit<Assessment, 'id' | 'created_at'> & { id?: string };
+export type GradeInsert = Omit<Grade, 'id' | 'created_at' | 'updated_at'> & { id?: string };
+export type PaymentInsert = Omit<PaymentTransaction, 'id' | 'created_at' | 'updated_at' | 'student_name' | 'receipt_number'> & { id?: string };
