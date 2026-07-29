@@ -1,7 +1,10 @@
-import React from 'react';
-import { X, QrCode, Printer, ShieldCheck, Phone, MapPin, School as SchoolIcon } from 'lucide-react';
-import { Student } from '../../types/database';
+import React, { useState, useEffect } from 'react';
+import { X, QrCode, Printer, ShieldCheck, Phone, MapPin, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { Student, PaymentTransaction } from '../../types/database';
 import { useTenant } from '../../context/TenantContext';
+import { calculateStudentTuition, StudentTuitionInfo } from '../../services/studentTuitionService';
+import { supabaseService } from '../../services/supabaseService';
+import { formatFCFA } from '../../utils/payrollCalculations';
 
 interface StudentCardModalProps {
   student: Student;
@@ -10,6 +13,14 @@ interface StudentCardModalProps {
 
 export const StudentCardModal: React.FC<StudentCardModalProps> = ({ student, onClose }) => {
   const { currentSchool, academicYear } = useTenant();
+  const [payments, setPayments] = useState<PaymentTransaction[]>([]);
+  const [showQrDetails, setShowQrDetails] = useState(false);
+
+  useEffect(() => {
+    supabaseService.fetchPayments().then(setPayments);
+  }, []);
+
+  const tuitionInfo: StudentTuitionInfo = calculateStudentTuition(student, payments);
 
   const handlePrint = () => {
     window.print();
@@ -17,12 +28,12 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({ student, onC
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-6 relative animate-fadeIn max-h-[90vh] overflow-y-auto">
-        {/* Header */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 relative animate-fadeIn max-h-[90vh] overflow-y-auto">
+        {/* Modal Header */}
         <div className="flex items-center justify-between no-print">
           <div className="flex items-center space-x-2 text-brand-600 dark:text-brand-400 font-bold">
             <ShieldCheck className="w-5 h-5" />
-            <span>Carte Scolaire Officielle (QR Code)</span>
+            <span>Carte Scolaire Officielle avec Statut QR</span>
           </div>
           <button 
             onClick={onClose}
@@ -45,8 +56,9 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({ student, onC
                 <div className="text-[9px] text-brand-200">{currentSchool.registration_number} • {academicYear.name}</div>
               </div>
             </div>
-            <span className="bg-ivory-orange text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
-              ÉLÈVE
+            {/* Financial Status Badge */}
+            <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${tuitionInfo.isSolded ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white animate-pulse'}`}>
+              {tuitionInfo.statusLabel}
             </span>
           </div>
 
@@ -60,7 +72,7 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({ student, onC
                 className="w-24 h-28 object-cover rounded-xl border-2 border-white/80 shadow-md"
               />
               <span className="absolute -bottom-2 -right-1 bg-emerald-500 text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded-full">
-                ACTIF
+                INSCRIT
               </span>
             </div>
 
@@ -88,35 +100,73 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({ student, onC
             </div>
           </div>
 
-          {/* Footer Bar with QR Code & Barcode */}
-          <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+          {/* Financial Status Summary Box */}
+          <div className="bg-white/10 backdrop-blur-xs rounded-xl p-2.5 border border-white/15 text-xs space-y-1">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-300 font-semibold">Statut Scolarité :</span>
+              <span className={`font-extrabold ${tuitionInfo.isSolded ? 'text-emerald-400' : 'text-rose-300'}`}>
+                {tuitionInfo.isSolded ? '✓ SCOLARITÉ SOLDÉE' : `⚠ RESTE À PAYER (${formatFCFA(tuitionInfo.remainingBalance)})`}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-300 pt-1 border-t border-white/10">
+              <div>Payé : <strong className="text-white">{formatFCFA(tuitionInfo.totalPaid)}</strong></div>
+              <div>Total Frais : <strong className="text-white">{formatFCFA(tuitionInfo.totalTuition)}</strong></div>
+            </div>
+          </div>
+
+          {/* Footer Bar with Address & Real Scannable QR Code */}
+          <div className="pt-2 border-t border-white/10 flex items-center justify-between">
             <div className="space-y-0.5 text-[9px] text-slate-300">
               <div className="flex items-center gap-1">
                 <MapPin className="w-3 h-3 text-slate-400" />
-                <span className="truncate max-w-[180px]">{student.address || 'Riviera Palmeraie, Abidjan'}</span>
+                <span className="truncate max-w-[170px]">{student.address || 'Riviera Palmeraie, Abidjan'}</span>
               </div>
               <div className="flex items-center gap-1 text-slate-400">
                 <Phone className="w-3 h-3 text-slate-400" />
-                <span>Urgence: +225 07 09 88 77 66</span>
+                <span>Contact: +225 27 22 49 88 00</span>
               </div>
             </div>
 
-            {/* QR Code Container */}
-            <div className="bg-white p-1.5 rounded-lg text-slate-900 shadow-sm flex flex-col items-center">
-              <QrCode className="w-10 h-10" />
-              <span className="text-[7px] font-mono font-bold mt-0.5">{student.registration_number}</span>
+            {/* REAL SCANNABLE QR CODE */}
+            <div className="bg-white p-1.5 rounded-lg text-slate-900 shadow-md flex flex-col items-center">
+              <img
+                src={tuitionInfo.qrImageUrl}
+                alt={`QR Code ${student.registration_number}`}
+                className="w-16 h-16 object-contain"
+              />
+              <span className="text-[7px] font-mono font-extrabold mt-0.5 text-slate-800">{student.registration_number}</span>
             </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* QR Code Payload Inspection Toggle (no-print) */}
+        <div className="no-print bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 text-xs space-y-2 border border-slate-200 dark:border-slate-700">
+          <div 
+            onClick={() => setShowQrDetails(!showQrDetails)}
+            className="flex items-center justify-between cursor-pointer font-bold text-slate-700 dark:text-slate-300"
+          >
+            <span className="flex items-center gap-1.5">
+              <Info className="w-4 h-4 text-brand-500" />
+              Contenu du QR Code (Données d'analyse au scan)
+            </span>
+            <span className="text-brand-600 text-[11px]">{showQrDetails ? 'Masquer' : 'Afficher'}</span>
+          </div>
+
+          {showQrDetails && (
+            <pre className="bg-slate-900 text-emerald-400 p-3 rounded-xl font-mono text-[10px] whitespace-pre-wrap overflow-x-auto shadow-inner">
+              {tuitionInfo.qrDataString}
+            </pre>
+          )}
+        </div>
+
+        {/* Action Buttons (no-print) */}
         <div className="flex items-center gap-3 no-print">
           <button
             onClick={handlePrint}
-            className="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
+            className="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-colors flex items-center justify-center gap-2 shadow-md"
           >
             <Printer className="w-4 h-4" />
-            <span>Imprimer la Carte</span>
+            <span>Imprimer la Carte QR</span>
           </button>
           <button
             onClick={onClose}

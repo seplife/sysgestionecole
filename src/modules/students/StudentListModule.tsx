@@ -3,16 +3,19 @@ import {
   Users, Search, UserPlus, Filter, QrCode, Eye, 
   MoreVertical, CheckCircle2, ShieldAlert, Download, RefreshCw, Edit2, Trash2, X, Save, Upload
 } from 'lucide-react';
-import { Student, SchoolClass } from '../../types/database';
+import { Student, SchoolClass, PaymentTransaction } from '../../types/database';
 import { supabaseService } from '../../services/supabaseService';
 import { accessControlService } from '../../services/accessControlService';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { StudentCardModal } from './StudentCardModal';
 import { RegistrationWizardModule } from './RegistrationWizardModule';
+import { calculateStudentTuition } from '../../services/studentTuitionService';
+import { formatFCFA } from '../../utils/payrollCalculations';
 
 export const StudentListModule: React.FC = () => {
   const { currentPlan } = useSubscription();
   const [students, setStudents] = useState<Student[]>([]);
+  const [payments, setPayments] = useState<PaymentTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('Tous');
@@ -28,6 +31,7 @@ export const StudentListModule: React.FC = () => {
       setStudents(data);
       setLoading(false);
     });
+    supabaseService.fetchPayments().then(pData => setPayments(pData));
     supabaseService.fetchClasses().then(data => setClassesList(data));
   }, []);
 
@@ -150,49 +154,54 @@ export const StudentListModule: React.FC = () => {
                 <th className="py-3.5 px-4">Matricule MENA</th>
                 <th className="py-3.5 px-4">Classe</th>
                 <th className="py-3.5 px-4">Sexe / Sang</th>
-                <th className="py-3.5 px-4">Statut</th>
+                <th className="py-3.5 px-4">Statut Scolarité (QR)</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredStudents.map((std) => (
-                <tr key={std.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="py-3 px-4 flex items-center space-x-3">
-                    <img 
-                      src={std.photo_url || 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100'} 
-                      alt={std.first_name} 
-                      className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
-                    />
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white">{std.last_name} {std.first_name}</div>
-                      <div className="text-xs text-slate-400">{std.place_of_birth} ({std.date_of_birth})</div>
-                    </div>
-                  </td>
+              {filteredStudents.map((std) => {
+                const tuitionInfo = calculateStudentTuition(std, payments);
+                return (
+                  <tr key={std.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 px-4 flex items-center space-x-3">
+                      <img 
+                        src={std.photo_url || 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100'} 
+                        alt={std.first_name} 
+                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
+                      />
+                      <div>
+                        <div className="font-bold text-slate-900 dark:text-white">{std.last_name} {std.first_name}</div>
+                        <div className="text-xs text-slate-400">{std.place_of_birth} ({std.date_of_birth})</div>
+                      </div>
+                    </td>
 
-                  <td className="py-3 px-4 font-mono font-bold text-brand-600 dark:text-brand-400">
-                    {std.registration_number}
-                  </td>
+                    <td className="py-3 px-4 font-mono font-bold text-brand-600 dark:text-brand-400">
+                      {std.registration_number}
+                    </td>
 
-                  <td className="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">
-                    <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-md text-xs font-bold">
-                      {std.current_class_name || 'Non affecté'}
-                    </span>
-                  </td>
+                    <td className="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">
+                      <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-md text-xs font-bold">
+                        {std.current_class_name || 'Non affecté'}
+                      </span>
+                    </td>
 
-                  <td className="py-3 px-4 text-xs">
-                    <div>Sexe: <span className="font-bold">{std.gender}</span></div>
-                    <div className="text-slate-400">Sang: {std.blood_group || 'O+'}</div>
-                  </td>
+                    <td className="py-3 px-4 text-xs">
+                      <div>Sexe: <span className="font-bold">{std.gender}</span></div>
+                      <div className="text-slate-400">Sang: {std.blood_group || 'O+'}</div>
+                    </td>
 
-                  <td className="py-3 px-4">
-                    <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
-                      std.status === 'Inscrit' || std.status === 'Reinscrit'
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                        : 'bg-amber-50 text-amber-700'
-                    }`}>
-                      {std.status}
-                    </span>
-                  </td>
+                    <td className="py-3 px-4">
+                      {tuitionInfo.isSolded ? (
+                        <span className="px-2.5 py-1 text-xs font-extrabold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 inline-flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>SOLDÉ (0 FCFA)</span>
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 text-xs font-extrabold rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 inline-flex items-center gap-1">
+                          <span>RESTE: {formatFCFA(tuitionInfo.remainingBalance)}</span>
+                        </span>
+                      )}
+                    </td>
 
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
