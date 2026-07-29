@@ -1,29 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Filter, CheckCircle2, XCircle, FileText, ArrowDownToLine } from 'lucide-react';
+import { Plus, Search, Filter, CheckCircle2, XCircle, FileText, ArrowDownToLine, Trash2, Edit2 } from 'lucide-react';
 import { formatFCFA } from '../../utils/payrollCalculations';
 import { Revenue, RevenueStatus } from '../../types';
 import { PaymentMethod } from '../../types/hr';
-import budgetService from '../../services/budgetService';
+import { budgetService } from '../../services/budgetService';
 
-const RevenuesManagementModule: React.FC = () => {
+const SCHOOL_ID = '00000000-0000-4000-8000-000000000001';
+
+export const RevenuesManagementModule: React.FC = () => {
   const [revenues, setRevenues] = useState<Revenue[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Search and Filter states
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<RevenueStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Form state
-  const [formData, setFormData] = useState<Partial<Revenue>>({
-    source_name: '',
-    description: '',
-    amount: 0,
-    revenue_date: new Date().toISOString().split('T')[0],
-    payment_method: 'virement' as PaymentMethod,
-  });
+  const [formData, setFormData] = useState<Partial<Revenue>>({});
 
   const fetchData = async () => {
     try {
@@ -41,15 +37,30 @@ const RevenuesManagementModule: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleOpenModal = () => {
-    setFormData({
-      source_name: '',
-      description: '',
-      amount: 0,
-      revenue_date: new Date().toISOString().split('T')[0],
-      payment_method: 'virement' as PaymentMethod,
-    });
+  const handleOpenModal = (revenue?: Revenue) => {
+    if (revenue) {
+      setFormData(revenue);
+    } else {
+      setFormData({
+        source_name: '',
+        description: '',
+        amount: 0,
+        revenue_date: new Date().toISOString().split('T')[0],
+        payment_method: 'virement' as PaymentMethod,
+      });
+    }
     setIsModalOpen(true);
+  };
+
+  const handleDeleteRevenue = async (id: string) => {
+    if (confirm('Voulez-vous vraiment supprimer cette recette ?')) {
+      try {
+        await budgetService.deleteRevenue(id);
+        await fetchData();
+      } catch (error) {
+        console.error('Error deleting revenue:', error);
+      }
+    }
   };
 
   const handleCloseModal = () => {
@@ -62,7 +73,7 @@ const RevenuesManagementModule: React.FC = () => {
     try {
       const newRevenue: Partial<Revenue> = {
         ...formData,
-        school_id: 'current-school',
+        school_id: SCHOOL_ID,
         revenue_number: formData.revenue_number || `REC-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`,
         status: formData.status || 'en_attente',
       };
@@ -219,6 +230,22 @@ const RevenuesManagementModule: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        <button 
+                          onClick={() => handleOpenModal(revenue)}
+                          className="p-1.5 text-brand-600 hover:text-brand-800 hover:bg-brand-50 rounded-lg transition-colors"
+                          title="Modifier"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        
+                        <button 
+                          onClick={() => handleDeleteRevenue(revenue.id)}
+                          className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+
                         {revenue.status === 'en_attente' && (
                           <button 
                             onClick={() => handleStatusChange(revenue.id, 'encaisse')}

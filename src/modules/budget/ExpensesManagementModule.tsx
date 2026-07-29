@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Filter, Eye, CheckCircle2, Check, XCircle, FileText, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, Eye, CheckCircle2, Check, XCircle, FileText, Trash2, Edit2 } from 'lucide-react';
 import { formatFCFA } from '../../utils/payrollCalculations';
 import { Expense, CostCenter, ExpenseStatus } from '../../types';
 import { PaymentMethod } from '../../types/hr';
-import budgetService from '../../services/budgetService';
+import { budgetService } from '../../services/budgetService';
 
-const ExpensesManagementModule: React.FC = () => {
+const SCHOOL_ID = '00000000-0000-4000-8000-000000000001';
+
+export const ExpensesManagementModule: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,17 @@ const ExpensesManagementModule: React.FC = () => {
     fetchData();
   }, []);
 
+  const handleDeleteExpense = async (id: string) => {
+    if (confirm('Voulez-vous vraiment supprimer cette dépense ?')) {
+      try {
+        await budgetService.deleteExpense(id);
+        await fetchData();
+      } catch (error) {
+        console.error('Error deleting expense:', error);
+      }
+    }
+  };
+
   const handleOpenModal = (expense?: Expense) => {
     if (expense) {
       setFormData(expense);
@@ -90,7 +103,7 @@ const ExpensesManagementModule: React.FC = () => {
       
       const newExpense: Partial<Expense> = {
         ...formData,
-        school_id: 'current-school',
+        school_id: SCHOOL_ID,
         expense_number: formData.expense_number || `DEP-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`,
         status: formData.status || 'brouillon',
         cost_center_name: selectedCenter ? selectedCenter.name : undefined,
@@ -273,10 +286,26 @@ const ExpensesManagementModule: React.FC = () => {
                       <div className="flex items-center justify-end gap-1">
                         <button 
                           onClick={() => handleOpenDetailModal(expense)}
-                          className="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"
-                          title="Voir les détails"
+                          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                          title="Détails"
                         >
                           <Eye className="w-4 h-4" />
+                        </button>
+                        
+                        <button 
+                          onClick={() => handleOpenModal(expense)}
+                          className="p-1.5 text-brand-600 hover:text-brand-800 hover:bg-brand-50 rounded-lg transition-colors"
+                          title="Modifier"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        
+                        <button 
+                          onClick={() => handleDeleteExpense(expense.id)}
+                          className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                         
                         {expense.status === 'brouillon' && (

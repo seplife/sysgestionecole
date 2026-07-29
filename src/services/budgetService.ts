@@ -242,7 +242,7 @@ const initialRevenues: Revenue[] = [
  */
 async function trySupabase<T>(
   tableName: string,
-  query: () => Promise<{ data: T | null; error: any }>
+  query: () => PromiseLike<{ data: any; error: any }>
 ): Promise<T | null> {
   if (!isSupabaseConfigured()) return null;
   try {
@@ -367,6 +367,31 @@ export const budgetService = {
     const { cost_center_name, lines, ...dbBudget } = budget as Budget;
     await trySupabase('budgets', () => supabase.from('budgets').upsert(dbBudget));
     return updated;
+  },
+
+  async deleteBudget(id: string): Promise<Budget[]> {
+    const current = await this.fetchBudgets();
+    const updated = current.filter(b => b.id !== id);
+    setLocalCache('budget_budgets', updated);
+    await trySupabase('budgets', () => supabase.from('budgets').delete().eq('id', id));
+
+    // Delete associated lines
+    const lines = await this.fetchBudgetLines();
+    const updatedLines = lines.filter(l => l.budget_id !== id);
+    setLocalCache('budget_lines', updatedLines);
+    await trySupabase('budget_lines', () => supabase.from('budget_lines').delete().eq('budget_id', id));
+
+    return updated;
+  },
+
+  async resetToDefaultData(): Promise<void> {
+    setLocalCache('budget_periods', initialBudgetPeriods);
+    setLocalCache('budget_cost_centers', initialCostCenters);
+    setLocalCache('budget_categories', initialBudgetCategories);
+    setLocalCache('budget_budgets', initialBudgets);
+    setLocalCache('budget_lines', initialBudgetLines);
+    setLocalCache('budget_expenses', initialExpenses);
+    setLocalCache('budget_revenues', initialRevenues);
   },
 
   // ═══════════════════════════════════════════════════════════
@@ -538,3 +563,5 @@ export const budgetService = {
     }
   },
 };
+
+export default budgetService;

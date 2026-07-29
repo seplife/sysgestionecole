@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Layers, Plus, Edit2, X, Power } from 'lucide-react';
+import { Layers, Plus, Edit2, X, Power, Trash2 } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
 import { CostCenter, Budget } from '../../types';
 import { formatFCFA } from '../../utils/payrollCalculations';
@@ -28,6 +28,17 @@ export const CostCentersModule: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
+  const handleDelete = async (id: string) => {
+    if (confirm('Voulez-vous vraiment supprimer ce centre de coûts ?')) {
+      try {
+        await budgetService.deleteCostCenter(id);
+        await fetchData();
+      } catch (error) {
+        console.error("Failed to delete cost center", error);
+      }
+    }
+  };
+
   const handleOpenModal = (cc?: CostCenter) => {
     if (cc) {
       setEditingCenter(cc);
@@ -38,7 +49,7 @@ export const CostCentersModule: React.FC = () => {
         description: '',
         manager_name: '',
         is_active: true,
-        school_id: 'current-school'
+        school_id: '00000000-0000-4000-8000-000000000001'
       });
     }
     setIsModalOpen(true);
@@ -147,6 +158,9 @@ export const CostCentersModule: React.FC = () => {
                     </button>
                     <button onClick={() => handleOpenModal(cc)} title="Modifier" className="p-1.5 bg-slate-100 dark:bg-slate-800 text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors">
                       <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => handleDelete(cc.id)} title="Supprimer" className="p-1.5 bg-rose-50 dark:bg-rose-900/20 text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-lg transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
