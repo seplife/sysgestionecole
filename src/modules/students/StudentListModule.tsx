@@ -232,7 +232,8 @@ export const StudentListModule: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              );
+            })}
             </tbody>
           </table>
         </div>
