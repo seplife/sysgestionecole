@@ -60,7 +60,73 @@ export const schoolService = {
       .single();
 
     if (error) throw handleSupabaseError(error, 'Création de l\'école');
-    return data as School;
+    const createdSchool = data as School;
+
+    try {
+      // 1. Rattacher l'utilisateur connecté comme membre et administrateur de la nouvelle école
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user) {
+        const userId = authData.user.id;
+
+        await supabase
+          .from('school_members')
+          .upsert({
+            school_id: createdSchool.id,
+            user_id: userId,
+            role: 'directeur',
+            is_active: true
+          }, { onConflict: 'school_id,user_id' });
+
+        await supabase
+          .from('user_profiles')
+          .update({
+            school_id: createdSchool.id,
+            role: 'directeur'
+          })
+          .eq('id', userId);
+      }
+
+      // 2. Créer l'abonnement SaaS actif par défaut
+      const { data: plans } = await supabase.from('plans').select('id').limit(1);
+      const defaultPlanId = plans && plans.length > 0 ? plans[0].id : '00000000-0000-4000-a000-000000000003';
+
+      await supabase
+        .from('subscriptions')
+        .insert({
+          school_id: createdSchool.id,
+          plan_id: defaultPlanId,
+          status: 'active',
+          starts_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+        });
+
+      // 3. Initialiser l'année scolaire et les trimestres par défaut
+      const currentYear = new Date().getFullYear();
+      const ayName = `${currentYear}-${currentYear + 1}`;
+      const { data: ayData } = await supabase
+        .from('academic_years')
+        .insert({
+          school_id: createdSchool.id,
+          name: ayName,
+          start_date: `${currentYear}-09-15`,
+          end_date: `${currentYear + 1}-07-15`,
+          is_current: true
+        })
+        .select()
+        .maybeSingle();
+
+      if (ayData) {
+        await supabase.from('academic_terms').insert([
+          { school_id: createdSchool.id, academic_year_id: ayData.id, name: '1er Trimestre', period_type: 'Trimestre', start_date: `${currentYear}-09-15`, end_date: `${currentYear}-12-20`, is_current: false },
+          { school_id: createdSchool.id, academic_year_id: ayData.id, name: '2ème Trimestre', period_type: 'Trimestre', start_date: `${currentYear + 1}-01-05`, end_date: `${currentYear + 1}-03-28`, is_current: false },
+          { school_id: createdSchool.id, academic_year_id: ayData.id, name: '3ème Trimestre', period_type: 'Trimestre', start_date: `${currentYear + 1}-04-06`, end_date: `${currentYear + 1}-07-10`, is_current: true }
+        ]);
+      }
+    } catch (suppErr) {
+      console.warn('[SchoolService] Initial setup warning (non-blocking):', suppErr);
+    }
+
+    return createdSchool;
   },
 
   async update(id: string, updates: Partial<SchoolInsert>): Promise<School> {

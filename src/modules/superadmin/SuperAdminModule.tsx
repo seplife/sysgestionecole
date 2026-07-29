@@ -35,43 +35,45 @@ export const SuperAdminModule: React.FC = () => {
     motto: ''
   });
 
-  const handleCreateSchool = (e: React.FormEvent) => {
+  const handleCreateSchool = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSchoolData.name || !newSchoolData.registration_number) return;
 
-    const createdSchool: School = {
-      id: `school-${Date.now()}`,
-      organization_id: 'org-saint-viateur-01',
-      name: newSchoolData.name,
-      slug: newSchoolData.name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString().slice(-4),
-      status: 'active',
-      registration_number: newSchoolData.registration_number,
-      motto: 'Foi, Discipline, Excellence',
-      address: newSchoolData.address || 'Riviera, Abidjan',
-      city: newSchoolData.city,
-      phone: newSchoolData.phone || '+225 27 22 00 00 00',
-      whatsapp: newSchoolData.phone || '+225 07 00 00 00 00',
-      email: newSchoolData.email || 'contact@ecole.ci',
-      director_name: newSchoolData.director_name || 'Directeur Général',
-      school_type: newSchoolData.school_type,
-      logo_url: '/images/logoecole.png',
-      education_levels: newSchoolData.education_levels,
-      created_at: new Date().toISOString()
-    };
+    try {
+      const createdSchool: Partial<School> = {
+        name: newSchoolData.name,
+        slug: newSchoolData.name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString().slice(-4),
+        status: 'active',
+        registration_number: newSchoolData.registration_number,
+        motto: 'Foi, Discipline, Excellence',
+        address: newSchoolData.address || 'Abidjan',
+        city: newSchoolData.city,
+        phone: newSchoolData.phone || '+225 27 22 00 00 00',
+        whatsapp: newSchoolData.phone || '+225 07 00 00 00 00',
+        email: newSchoolData.email || 'contact@ecole.ci',
+        director_name: newSchoolData.director_name || 'Directeur Général',
+        school_type: newSchoolData.school_type,
+        logo_url: '/images/logoecole.png',
+        education_levels: newSchoolData.education_levels,
+        created_at: new Date().toISOString()
+      };
 
-    addNewSchool(createdSchool);
-    setShowAddModal(false);
-    setNewSchoolData({
-      name: '',
-      registration_number: '',
-      city: 'Abidjan',
-      address: '',
-      phone: '',
-      email: '',
-      director_name: '',
-      school_type: 'Prive',
-      education_levels: ['Secondaire']
-    });
+      await addNewSchool(createdSchool as School);
+      setShowAddModal(false);
+      setNewSchoolData({
+        name: '',
+        registration_number: '',
+        city: 'Abidjan',
+        address: '',
+        phone: '',
+        email: '',
+        director_name: '',
+        school_type: 'Prive',
+        education_levels: ['Secondaire']
+      });
+    } catch (err: any) {
+      console.error('Error creating school in SuperAdminModule:', err);
+    }
   };
 
   const handleOpenEditModal = (sch: School) => {

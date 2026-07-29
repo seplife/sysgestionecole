@@ -148,19 +148,10 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setSchools(data);
 
       if (data.length > 0) {
-        const savedId = getSavedSchoolId();
-
-        // `localStorage` n'est une préférence UI légitime QUE pour le Super Admin,
-        // qui navigue entre plusieurs écoles. Pour un utilisateur standard,
-        // on ignore totalement la valeur sauvegardée : la source de vérité
-        // est `primarySchoolId`, dérivé de la session serveur (school_members).
-        const preferred =
-          isSuperAdmin && savedId
-            ? data.find(s => s.id === savedId)
-            : null;
+        const savedSchool = savedId ? data.find(s => s.id === savedId) : null;
 
         const selected =
-          preferred ||
+          savedSchool ||
           data.find(s => s.id === primarySchoolId) ||
           data[0];
 
@@ -243,9 +234,11 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const addNewSchool = async (school: School) => {
     try {
       const created = await schoolService.create(school as any);
-      setSchools(prev => [created, ...prev]);
+      setSchools(prev => [created, ...prev.filter(s => s.id !== created.id)]);
       setCurrentSchoolState(created);
       saveCurrentSchoolId(created.id);
+      await loadSchools();
+      return created;
     } catch (e) {
       console.error('[TenantContext] addNewSchool error:', e);
       throw e;

@@ -8,6 +8,8 @@ import { useTenant } from '../../context/TenantContext';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { School } from '../../types/database';
 
+import { supabase } from '../../lib/supabase';
+
 type SchoolType = 'Public' | 'Prive' | 'Confessionnel';
 
 interface OnboardingWizardProps {
@@ -151,12 +153,33 @@ export const OnboardingWizardModule: React.FC<OnboardingWizardProps> = ({ onComp
     setErrorMsg(null);
 
     try {
-      // Create New School Object
-      const newSchoolId = `school-${Date.now()}`;
-      const newSchool: School = {
-        id: newSchoolId,
+      // 1. S'il s'agit d'un nouveau responsable avec email & mot de passe
+      if (adminProfile.email.trim() && adminProfile.password) {
+        const email = adminProfile.email.trim().toLowerCase();
+        const password = adminProfile.password;
+
+        const { error: signUpErr } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              first_name: adminProfile.firstName,
+              last_name: adminProfile.lastName
+            }
+          }
+        });
+
+        if (signUpErr && !signUpErr.message.includes('already registered')) {
+          console.warn('[Onboarding] Supabase signUp notice:', signUpErr.message);
+        }
+
+        await login(email, password);
+      }
+
+      // 2. Création de l'établissement dans Supabase avec ID valide autogénéré
+      const newSchoolPayload: Partial<School> = {
         name: schoolData.name,
-        slug: schoolData.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+        slug: schoolData.name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString().slice(-4),
         registration_number: schoolData.registrationNumber,
         school_type: schoolData.schoolType,
         address: schoolData.address || `${schoolData.city}, Côte d'Ivoire`,
@@ -165,20 +188,18 @@ export const OnboardingWizardModule: React.FC<OnboardingWizardProps> = ({ onComp
         whatsapp: schoolData.whatsapp,
         email: schoolData.email,
         logo_url: schoolData.logoUrl,
-        director_name: schoolData.directorName,
+        director_name: schoolData.directorName || `${adminProfile.lastName} ${adminProfile.firstName}`,
         status: paymentOption === 'trial' ? 'active' : 'pending'
       };
 
-      // Add to Tenant Context
-      addNewSchool(newSchool);
+      // 3. Attendre la création de l'école et le rattachement complet dans Supabase
+      await addNewSchool(newSchoolPayload as School);
 
-      // Perform Auto-login as school_admin
-      await login('directeur@saintviateur.ci', 'admin123');
-
-      // Complete wizard callback
+      // 4. Clôturer le wizard d'activation
       onComplete();
     } catch (err: any) {
-      setErrorMsg('Une erreur est survenue lors de l\'activation SaaS de votre établissement.');
+      console.error('[Onboarding] Error in handleFinalActivation:', err);
+      setErrorMsg(err?.message || 'Une erreur est survenue lors de l\'activation SaaS de votre établissement.');
     } finally {
       setIsSubmitting(false);
     }
