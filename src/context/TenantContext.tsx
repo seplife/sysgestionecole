@@ -5,7 +5,11 @@ import { useAuth } from './AuthContext';
 
 // ─────────────────────────────────────────────────────────────
 // PRÉFÉRENCE UI : école courante sélectionnée (localStorage)
-// Ce n'est PAS une source de vérité — juste la préférence UI
+// Ce n'est PAS une source de vérité pour un utilisateur standard —
+// uniquement une préférence UI valable pour le Super Admin, qui a
+// accès à plusieurs écoles et a besoin de mémoriser son choix.
+// Pour un utilisateur standard, la source de vérité est toujours
+// `primarySchoolId` (dérivé de la session / school_members côté serveur).
 // ─────────────────────────────────────────────────────────────
 const UI_CURRENT_SCHOOL_KEY = 'sysgestionecole_ui_current_school_id';
 
@@ -127,6 +131,13 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   // ── Charger les écoles depuis Supabase ───────────────────
+  // NOTE SÉCURITÉ : schoolService.getAll() doit impérativement utiliser
+  // le client Supabase "anon/authenticated" (jamais service_role) afin que
+  // les policies RLS de la table `schools` filtrent déjà le résultat :
+  //   - utilisateur standard  -> uniquement les écoles où il est membre actif
+  //   - super admin           -> toutes les écoles
+  // Le code ci-dessous suppose ce filtrage déjà appliqué côté serveur et
+  // ajoute une seconde barrière côté client par prudence (défense en profondeur).
   const loadSchools = useCallback(async () => {
     if (!isAuthenticated) return;
     setSchoolsLoading(true);
@@ -137,10 +148,22 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setSchools(data);
 
       if (data.length > 0) {
-        // Restaurer l'école préférée si elle est toujours accessible
-        const savedId = getSavedSchoolId() || primarySchoolId;
-        const preferred = savedId ? data.find(s => s.id === savedId) : null;
-        const selected = preferred || data[0];
+        const savedId = getSavedSchoolId();
+
+        // `localStorage` n'est une préférence UI légitime QUE pour le Super Admin,
+        // qui navigue entre plusieurs écoles. Pour un utilisateur standard,
+        // on ignore totalement la valeur sauvegardée : la source de vérité
+        // est `primarySchoolId`, dérivé de la session serveur (school_members).
+        const preferred =
+          isSuperAdmin && savedId
+            ? data.find(s => s.id === savedId)
+            : null;
+
+        const selected =
+          preferred ||
+          data.find(s => s.id === primarySchoolId) ||
+          data[0];
+
         setCurrentSchoolState(selected);
         saveCurrentSchoolId(selected.id);
       } else {
@@ -171,7 +194,19 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [isAuthenticated, loadSchools]);
 
   // ── Changer l'école courante (préférence UI) ─────────────
+  // Garde-fou : un utilisateur standard ne peut sélectionner que
+  // son école d'appartenance (primarySchoolId), même si un composant
+  // UI mal protégé tentait de lui proposer une autre école.
   const setCurrentSchool = (school: School) => {
+    const isAllowed = isSuperAdmin || school.id === primarySchoolId;
+
+    if (!isAllowed) {
+      console.warn(
+        '[TenantContext] Tentative de sélection d\'une école non autorisée pour cet utilisateur.'
+      );
+      return;
+    }
+
     setCurrentSchoolState(school);
     saveCurrentSchoolId(school.id);
   };
@@ -276,5 +311,3 @@ export const useTenant = () => {
   }
   return context;
 };
-
-
