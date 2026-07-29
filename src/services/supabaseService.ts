@@ -144,7 +144,7 @@ export const ensureSchoolExists = async (schoolId: string, organizationId?: stri
     const validSchoolId = toValidUuid(schoolId);
     const validOrgId = toValidUuid(organizationId || DEFAULT_ORGANIZATION_ID);
 
-    // 1. Garanti l'existence de l'organisation parente
+    // 1. Garanti l'existence de l'organisation parente dans public.organizations
     await supabase.from('organizations').upsert({
       id: validOrgId,
       name: 'Groupe Scolaire Saint-Viateur',
@@ -165,6 +165,28 @@ export const ensureSchoolExists = async (schoolId: string, organizationId?: stri
       school_type: 'Prive',
       city: 'Abidjan',
       country: 'Côte d\'Ivoire'
+    }, { onConflict: 'id' });
+
+    // 3. Garanti l'existence de l'année scolaire par défaut dans public.academic_years
+    const defaultAyId = toValidUuid('ay-2025-2026');
+    await supabase.from('academic_years').upsert({
+      id: defaultAyId,
+      school_id: validSchoolId,
+      organization_id: validOrgId,
+      name: '2025-2026',
+      start_date: '2025-09-08',
+      end_date: '2026-07-15',
+      is_current: true
+    }, { onConflict: 'id' });
+
+    // 4. Garanti l'existence des niveaux par défaut dans public.levels
+    const defaultLevelId = toValidUuid('lvl-6e');
+    await supabase.from('levels').upsert({
+      id: defaultLevelId,
+      school_id: validSchoolId,
+      name: '6ème',
+      cycle: 'Secondaire_Premier_Cycle',
+      order_index: 1
     }, { onConflict: 'id' });
   } catch (e) {
     console.warn('[Supabase ensureSchoolExists Exception]:', e);

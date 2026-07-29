@@ -62,7 +62,28 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 3. Niveaux scolaires par défaut pour la clé étrangère classes_level_id_fkey
+-- 3. Années scolaires par défaut pour la clé étrangère classes_academic_year_id_fkey
+INSERT INTO public.academic_years (
+  id,
+  school_id,
+  organization_id,
+  name,
+  start_date,
+  end_date,
+  is_current
+)
+VALUES (
+  '00000000-0000-4000-8000-000020252026'::uuid,
+  '00000000-0000-4000-8000-000000000001'::uuid,
+  '00000000-0000-4000-8000-000000000000'::uuid,
+  '2025-2026',
+  '2025-09-08',
+  '2026-07-15',
+  TRUE
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- 4. Niveaux scolaires par défaut pour la clé étrangère classes_level_id_fkey
 INSERT INTO public.levels (id, school_id, name, cycle, order_index)
 VALUES 
   ('00000000-0000-4000-8000-00000000006e'::uuid, '00000000-0000-4000-8000-000000000001'::uuid, '6ème', 'Secondaire_Premier_Cycle', 1),

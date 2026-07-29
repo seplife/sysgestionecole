@@ -4,6 +4,8 @@ import {
 } from 'lucide-react';
 import { Student, SchoolClass } from '../../types/database';
 import { supabaseService } from '../../services/supabaseService';
+import { useTenant } from '../../context/TenantContext';
+import { DEFAULT_ORGANIZATION_ID, DEFAULT_SCHOOL_ID } from '../../services/tenantService';
 
 interface RegistrationWizardProps {
   onComplete: (newStudent: Student) => void;
@@ -16,8 +18,16 @@ export const RegistrationWizardModule: React.FC<RegistrationWizardProps> = ({
   onCancel,
   classesList 
 }) => {
+  const { currentSchool, organization } = useTenant();
   const [step, setStep] = useState<number>(1);
   const [classes, setClasses] = useState<SchoolClass[]>(classesList || []);
+
+  const generateMatricule = () => {
+    const year = new Date().getFullYear().toString().slice(-2);
+    const randDigits = Math.floor(100000 + Math.random() * 900000);
+    const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+    return `${year}${randDigits}${letter}`;
+  };
 
   const [formData, setFormData] = useState({
     registrationNumber: '25180499E',
