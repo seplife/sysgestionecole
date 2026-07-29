@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, PieChart, Layers, DollarSign, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, Layers, DollarSign, TrendingUp, FileText } from 'lucide-react';
 import { BudgetDashboardModule } from './BudgetDashboardModule';
 import { CostCentersModule } from './CostCentersModule';
 import { ExpensesManagementModule } from './ExpensesManagementModule';
 import { RevenuesManagementModule } from './RevenuesManagementModule';
+import { BudgetLinesModule } from './BudgetLinesModule';
 
 export const BudgetModule: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -11,6 +12,7 @@ export const BudgetModule: React.FC = () => {
   const tabs = [
     { id: 'dashboard', label: 'Tableau de bord Financier', icon: LayoutDashboard },
     { id: 'cost_centers', label: 'Centres de Coûts', icon: Layers },
+    { id: 'budget_lines', label: 'Budgets & Lignes', icon: FileText },
     { id: 'expenses', label: 'Dépenses', icon: DollarSign },
     { id: 'revenues', label: 'Recettes', icon: TrendingUp },
   ];
@@ -21,6 +23,8 @@ export const BudgetModule: React.FC = () => {
         return <BudgetDashboardModule onNavigateSubModule={(mod) => setActiveTab(mod)} />;
       case 'cost_centers':
         return <CostCentersModule />;
+      case 'budget_lines':
+        return <BudgetLinesModule />;
       case 'expenses':
         return <ExpensesManagementModule />;
       case 'revenues':

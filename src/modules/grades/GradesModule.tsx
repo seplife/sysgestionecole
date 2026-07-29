@@ -163,7 +163,7 @@ export const GradesModule: React.FC = () => {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
             <FileSpreadsheet className="w-7 h-7 text-brand-500" />
-            <span>Saisie & Gestion des Notes (Évaluations MENA)</span>
+            <span>Saisie & Gestion des Notes</span>
           </h1>
           <p className="text-xs text-slate-400">Chaque enseignant dispose de 4 Interrogations, 3 Devoirs Surveillés et 1 Devoir de Niveau</p>
         </div>

@@ -343,77 +343,10 @@ export interface SaasSubscriptionRecord {
 }
 
 // ------------------------------------------------------------
-// TYPES DE BUDGET ET PAIE COMPATIBLES
+// TYPES DE BUDGET — Voir types/budget.ts pour les définitions complètes
+// (CostCenter, BudgetPeriod, BudgetCategory, Budget, BudgetLine, Expense, Revenue)
+// Exportés via types/index.ts → import depuis '../../types'
 // ------------------------------------------------------------
-
-export interface CostCenter {
-  id: string;
-  school_id: string;
-  code: string;
-  name: string;
-  description?: string;
-  manager_name?: string;
-  is_active: boolean;
-}
-
-export interface BudgetPeriod {
-  id: string;
-  school_id: string;
-  name: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-}
-
-export interface BudgetCategory {
-  id: string;
-  school_id: string;
-  type: 'depense' | 'recette';
-  code: string;
-  name: string;
-}
-
-export interface Budget {
-  id: string;
-  school_id: string;
-  budget_period_id: string;
-  cost_center_id: string;
-  cost_center_name?: string;
-  title: string;
-  total_planned: number;
-  total_committed: number;
-  total_consumed: number;
-}
-
-export interface BudgetLine {
-  id: string;
-  budget_id: string;
-  category_id: string;
-  category_name?: string;
-  planned_amount: number;
-  consumed_amount: number;
-}
-
-export interface Expense {
-  id: string;
-  school_id: string;
-  budget_line_id: string;
-  amount: number;
-  date: string;
-  recipient: string;
-  description: string;
-  status: string;
-}
-
-export interface Revenue {
-  id: string;
-  school_id: string;
-  budget_line_id: string;
-  amount: number;
-  date: string;
-  source: string;
-  description: string;
-}
 
 export interface Employee {
   id: string;
