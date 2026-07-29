@@ -136,7 +136,7 @@ export const RevenuesManagementModule: React.FC = () => {
           <p className="text-sm text-slate-500 dark:text-slate-400">Suivi des entrées de fonds de l'établissement</p>
         </div>
         <button
-          onClick={handleOpenModal}
+          onClick={() => handleOpenModal()}
           className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md flex items-center gap-2 transition-colors"
         >
           <Plus className="w-4 h-4" />

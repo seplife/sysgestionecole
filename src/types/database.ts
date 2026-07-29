@@ -343,55 +343,9 @@ export interface SaasSubscriptionRecord {
 }
 
 // ------------------------------------------------------------
-// TYPES DE BUDGET — Voir types/budget.ts pour les définitions complètes
-// (CostCenter, BudgetPeriod, BudgetCategory, Budget, BudgetLine, Expense, Revenue)
+// TYPES DE BUDGET, RH ET PAIE — Voir types/budget.ts, types/hr.ts, types/payroll.ts
 // Exportés via types/index.ts → import depuis '../../types'
 // ------------------------------------------------------------
-
-export interface Employee {
-  id: string;
-  school_id: string;
-  employee_number: string;
-  first_name: string;
-  last_name: string;
-  role?: string;
-  email?: string;
-  phone?: string;
-  is_active: boolean;
-}
-
-export interface EmployeePayrollProfile {
-  id: string;
-  employee_id: string;
-  base_salary: number;
-  housing_allowance?: number;
-  transport_allowance?: number;
-  social_security_number?: string;
-}
-
-export interface PayrollComponent {
-  id: string;
-  name: string;
-  type: 'gain' | 'retenue';
-  is_taxable: boolean;
-  is_subject_to_cnps: boolean;
-}
-
-export interface PayslipItem {
-  id: string;
-  payslip_id: string;
-  component_id: string;
-  amount: number;
-}
-
-export interface Payslip {
-  id: string;
-  employee_id: string;
-  period: string;
-  gross_salary: number;
-  net_salary: number;
-  payment_date: string;
-}
 
 // ------------------------------------------------------------
 // TYPES DE CRÉATION (INSERT DTO) & MISE À JOUR (UPDATE DTO)
