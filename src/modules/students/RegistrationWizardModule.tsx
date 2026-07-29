@@ -3,10 +3,9 @@ import {
   UserPlus, Upload, Sparkles, ArrowRight, ArrowLeft, CheckCircle2 
 } from 'lucide-react';
 import { Student, SchoolClass } from '../../types/database';
-import { studentService } from '../../services/studentService';
 import { supabaseService } from '../../services/supabaseService';
 import { useTenant } from '../../context/TenantContext';
-import { DEFAULT_ORGANIZATION_ID, DEFAULT_SCHOOL_ID } from '../../services/tenantService';
+import { DEFAULT_ORGANIZATION_ID, DEFAULT_SCHOOL_ID, generateUUID } from '../../services/tenantService';
 
 interface RegistrationWizardProps {
   onComplete: (newStudent: Student) => void;
@@ -99,7 +98,7 @@ export const RegistrationWizardModule: React.FC<RegistrationWizardProps> = ({
       const selectedClassName = formData.targetClass || (classes[0]?.name ?? 'Non affectée');
 
       const newStudent: Student = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         organization_id: organization.id || DEFAULT_ORGANIZATION_ID,
         school_id: currentSchool.id || DEFAULT_SCHOOL_ID,
         registration_number: formData.registrationNumber || generateMatricule(),
@@ -116,14 +115,11 @@ export const RegistrationWizardModule: React.FC<RegistrationWizardProps> = ({
         photo_url: formData.photoUrl
       };
 
-      const result = await studentService.saveStudent(newStudent);
+      // Utiliser supabaseService.saveStudent qui appelle ensureSchoolExists
+      // pour garantir l'existence des FK (org, école, année, niveaux) avant l'upsert
+      await supabaseService.saveStudent(newStudent);
 
-      if (!result.success && result.status === 'ERROR') {
-        setSubmitError(result.error || 'Erreur lors de l\'enregistrement de l\'élève.');
-        return;
-      }
-
-      onComplete(result.data || newStudent);
+      onComplete(newStudent);
     } catch (e: any) {
       setSubmitError(e?.message || 'Une erreur inattendue est survenue.');
     } finally {

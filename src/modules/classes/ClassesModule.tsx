@@ -3,7 +3,8 @@ import { GraduationCap, BookOpen, Users, Plus, Edit2, Trash2, Shield, Settings, 
 import { SchoolClass, Subject, Student } from '../../types/database';
 import { supabaseService } from '../../services/supabaseService';
 import { useTenant } from '../../context/TenantContext';
-import { DEFAULT_SCHOOL_ID } from '../../services/tenantService';
+import { DEFAULT_SCHOOL_ID, generateUUID } from '../../services/tenantService';
+import { toValidUuid } from '../../services/supabaseService';
 
 export const ClassesModule: React.FC = () => {
   const { currentSchool } = useTenant();
@@ -45,10 +46,10 @@ export const ClassesModule: React.FC = () => {
   const handleAddClass = (e: React.FormEvent) => {
     e.preventDefault();
     const created: SchoolClass = {
-      id: `cls-${Date.now()}`,
+      id: generateUUID(),
       school_id: currentSchool.id || DEFAULT_SCHOOL_ID,
-      academic_year_id: 'ay-2025-2026',
-      level_id: 'lvl-gen',
+      academic_year_id: toValidUuid('ay-2025-2026'),
+      level_id: toValidUuid('lvl-gen'),
       level_name: newClass.level_name,
       name: newClass.name,
       room_number: newClass.room_number,
@@ -437,7 +438,7 @@ export const ClassesModule: React.FC = () => {
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Capacité</label>
                   <input 
                     type="number" 
-                    value={editingClass.capacity}
+                    value={editingClass.capacity ?? ''}
                     onChange={(e) => setEditingClass({...editingClass, capacity: parseInt(e.target.value) || 40})}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl"
                   />
@@ -578,7 +579,7 @@ export const ClassesModule: React.FC = () => {
                   <input 
                     type="text" 
                     required
-                    value={editingSubject.code}
+                    value={editingSubject.code ?? ''}
                     onChange={(e) => setEditingSubject({...editingSubject, code: e.target.value})}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl font-mono uppercase"
                   />

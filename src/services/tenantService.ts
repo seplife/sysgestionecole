@@ -21,6 +21,25 @@ export const DEFAULT_SCHOOL_ID = '00000000-0000-4000-8000-000000000001';
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
+ * Génère un UUID v4 valide même dans un contexte HTTP non sécurisé (IP locale)
+ */
+export function generateUUID(): string {
+  if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.randomUUID === 'function') {
+    try {
+      return window.crypto.randomUUID();
+    } catch {
+      // Ignorer et passer au fallback RFC4122
+    }
+  }
+
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+/**
  * Récupère le contexte d'organisation et d'école de l'utilisateur actuellement connecté
  */
 export async function getCurrentTenantContext(): Promise<TenantContext> {

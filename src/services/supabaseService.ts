@@ -690,7 +690,21 @@ export const supabaseService = {
   },
 
   async saveClass(cls: Partial<SchoolClass>): Promise<SchoolClass[]> {
-    await classService.saveClass(cls);
+    try {
+      const tenant = await getCurrentTenantContext();
+      await ensureSchoolExists(
+        cls.school_id || tenant.schoolId,
+        undefined,
+        cls.level_id ? toValidUuid(cls.level_id) : undefined
+      );
+    } catch (e) {
+      console.warn('[supabaseService.saveClass] ensureSchoolExists warning:', e);
+    }
+    const result = await classService.saveClass(cls);
+    if (!result.success && result.status === 'ERROR') {
+      console.error('[supabaseService.saveClass] Échec:', result.error);
+      throw new Error(result.error || 'Échec de la synchronisation Supabase pour cette classe.');
+    }
     return classService.fetchClasses();
   },
 

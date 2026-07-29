@@ -5,15 +5,15 @@
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { SchoolClass, Subject } from '../types/database';
-import { getCurrentTenantContext, TenantContext } from './tenantService';
+import { getCurrentTenantContext, TenantContext, generateUUID } from './tenantService';
 import { syncService, ServiceResult } from './syncService';
 import { auditService } from './auditService';
 
 export function sanitizeClassPayload(cls: Partial<SchoolClass>, tenant: TenantContext) {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  const validId = (cls.id && uuidRegex.test(cls.id)) ? cls.id : crypto.randomUUID();
-  const validLevelId = (cls.level_id && uuidRegex.test(cls.level_id)) ? cls.level_id : crypto.randomUUID();
-  const validAyId = (cls.academic_year_id && uuidRegex.test(cls.academic_year_id)) ? cls.academic_year_id : crypto.randomUUID();
+  const validId = (cls.id && uuidRegex.test(cls.id)) ? cls.id : generateUUID();
+  const validLevelId = (cls.level_id && uuidRegex.test(cls.level_id)) ? cls.level_id : generateUUID();
+  const validAyId = (cls.academic_year_id && uuidRegex.test(cls.academic_year_id)) ? cls.academic_year_id : generateUUID();
 
   return {
     id: validId,

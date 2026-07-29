@@ -5,7 +5,7 @@
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Student } from '../types/database';
-import { getCurrentTenantContext, TenantContext } from './tenantService';
+import { getCurrentTenantContext, TenantContext, generateUUID } from './tenantService';
 import { syncService, ServiceResult } from './syncService';
 import { auditService } from './auditService';
 
@@ -17,7 +17,7 @@ export function sanitizeStudentPayload(student: Partial<Student>, tenant: Tenant
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const validId = (student.id && uuidRegex.test(student.id))
     ? student.id
-    : crypto.randomUUID();
+    : generateUUID();
 
   return {
     id: validId,
