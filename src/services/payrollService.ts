@@ -3,11 +3,12 @@ import { getLocalCache, setLocalCache } from './supabaseService';
 import { PayrollPeriod, PayrollComponent, EmployeePayrollProfile, Payslip, SalaryPayment, SalaryAdvance } from '../types';
 import { calculateEmployeePayslip } from '../utils/payrollCalculations';
 import { hrService } from './hrService';
+import { DEFAULT_SCHOOL_ID } from './tenantService';
 
 const initialPeriods: PayrollPeriod[] = [
   {
     id: 'per-2026-07',
-    school_id: 'school-palmeraie-01',
+    school_id: DEFAULT_SCHOOL_ID,
     name: 'Juillet 2026',
     period_code: '2026-07',
     start_date: '2026-07-01',
@@ -21,7 +22,7 @@ const initialPeriods: PayrollPeriod[] = [
   },
   {
     id: 'per-2026-08',
-    school_id: 'school-palmeraie-01',
+    school_id: DEFAULT_SCHOOL_ID,
     name: 'Août 2026',
     period_code: '2026-08',
     start_date: '2026-08-01',

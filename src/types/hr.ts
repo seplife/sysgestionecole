@@ -1,8 +1,8 @@
 export type EmployeeStatus = 'actif' | 'en_conge' | 'suspendu' | 'demissionnaire' | 'licencie' | 'retraite' | 'sorti';
 export type ContractType = 'CDI' | 'CDD' | 'temporaire' | 'vacataire' | 'prestataire' | 'stage' | 'autre';
 export type EmployeeType = 'permanent' | 'enseignant' | 'admin' | 'technique' | 'prestataire' | 'temporaire';
-export type PaymentMethod = 'virement' | 'mobile_money' | 'cheque' | 'especes';
-export type AttendanceStatus = 'present' | 'absent' | 'retard' | 'conge' | 'mission' | 'autorisation';
+export type HrPaymentMethod = 'virement' | 'mobile_money' | 'cheque' | 'especes';
+export type HrAttendanceStatus = 'present' | 'absent' | 'retard' | 'conge' | 'mission' | 'autorisation';
 export type LeaveStatus = 'en_attente' | 'valide_n1' | 'approuve' | 'refuse' | 'annule';
 
 export interface Department {

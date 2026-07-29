@@ -1,9 +1,10 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Student, Parent, SchoolClass, Subject, UserProfile, PaymentTransaction, School, Organization, AcademicYear, AttendanceRecord } from '../types/database';
+import { getCurrentTenantContext, DEFAULT_ORGANIZATION_ID, DEFAULT_SCHOOL_ID } from './tenantService';
 
 export const toValidUuid = (str: string | undefined | null): string => {
   if (!str || typeof str !== 'string' || str.trim() === '') {
-    return '00000000-0000-4000-8000-000000000001';
+    return DEFAULT_SCHOOL_ID;
   }
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (uuidRegex.test(str)) return str;
@@ -20,6 +21,7 @@ export const toValidUuid = (str: string | undefined | null): string => {
 
 export const sanitizeSchoolForDb = (school: any) => ({
   id: toValidUuid(school.id),
+  organization_id: toValidUuid(school.organization_id || DEFAULT_ORGANIZATION_ID),
   name: school.name || 'École',
   slug: school.slug || `school-${Date.now()}`,
   registration_number: school.registration_number || null,
@@ -37,40 +39,56 @@ export const sanitizeSchoolForDb = (school: any) => ({
   status: ['pending', 'active', 'suspended', 'blocked', 'cancelled'].includes(school.status) ? school.status : 'active'
 });
 
-export const sanitizeStudentForDb = (student: any) => ({
-  id: toValidUuid(student.id),
-  school_id: toValidUuid(student.school_id || 'school-palmeraie-01'),
-  user_id: null,
-  registration_number: student.registration_number || `REG-${Date.now()}`,
-  first_name: student.first_name || '',
-  last_name: student.last_name || '',
-  date_of_birth: student.date_of_birth && String(student.date_of_birth).trim() !== '' ? student.date_of_birth : null,
-  place_of_birth: student.place_of_birth || null,
-  gender: ['M', 'F'].includes(student.gender) ? student.gender : 'M',
-  nationality: student.nationality || 'Ivoirienne',
-  photo_url: student.photo_url || null,
-  status: ['Inscrit', 'Reinscrit', 'Transfere', 'Radie'].includes(student.status) ? student.status : 'Inscrit'
-});
+export const sanitizeStudentForDb = (student: any, tenantContext?: { organizationId?: string; schoolId?: string }) => {
+  const orgId = toValidUuid(student.organization_id || tenantContext?.organizationId || DEFAULT_ORGANIZATION_ID);
+  const schId = toValidUuid(student.school_id || tenantContext?.schoolId || DEFAULT_SCHOOL_ID);
 
-export const sanitizeClassForDb = (cls: any) => ({
-  id: toValidUuid(cls.id),
-  school_id: toValidUuid(cls.school_id || 'school-palmeraie-01'),
-  name: cls.name || 'Classe',
-  level: cls.level || 'Collège',
-  capacity: Number(cls.capacity || cls.max_capacity) || 50
-});
+  return {
+    id: toValidUuid(student.id),
+    organization_id: orgId,
+    school_id: schId,
+    user_id: student.user_id ? toValidUuid(student.user_id) : null,
+    registration_number: student.registration_number || `REG-${Date.now()}`,
+    first_name: student.first_name || '',
+    last_name: student.last_name || '',
+    date_of_birth: student.date_of_birth && String(student.date_of_birth).trim() !== '' ? student.date_of_birth : null,
+    place_of_birth: student.place_of_birth || null,
+    gender: ['M', 'F'].includes(student.gender) ? student.gender : 'M',
+    nationality: student.nationality || 'Ivoirienne',
+    photo_url: student.photo_url || null,
+    blood_group: student.blood_group || null,
+    address: student.address || null,
+    status: ['Inscrit', 'Reinscrit', 'Transfere', 'Radie'].includes(student.status) ? student.status : 'Inscrit'
+  };
+};
 
-export const sanitizeSubjectForDb = (sbj: any) => ({
+export const sanitizeClassForDb = (cls: any, tenantContext?: { schoolId?: string }) => {
+  const schId = toValidUuid(cls.school_id || tenantContext?.schoolId || DEFAULT_SCHOOL_ID);
+  const levelId = cls.level_id ? toValidUuid(cls.level_id) : toValidUuid(cls.level || 'lvl-6e');
+  const ayId = cls.academic_year_id ? toValidUuid(cls.academic_year_id) : toValidUuid('ay-2025-2026');
+
+  return {
+    id: toValidUuid(cls.id),
+    school_id: schId,
+    academic_year_id: ayId,
+    level_id: levelId,
+    name: cls.name || 'Classe',
+    room_number: cls.room_number || null,
+    capacity: Number(cls.capacity || cls.max_capacity) || 45
+  };
+};
+
+export const sanitizeSubjectForDb = (sbj: any, tenantContext?: { schoolId?: string }) => ({
   id: toValidUuid(sbj.id),
-  school_id: toValidUuid(sbj.school_id || 'school-palmeraie-01'),
+  school_id: toValidUuid(sbj.school_id || tenantContext?.schoolId || DEFAULT_SCHOOL_ID),
   code: sbj.code || 'MAT',
   name: sbj.name || 'Matière',
   coefficient: Number(sbj.coefficient) || 1
 });
 
-export const sanitizePaymentForDb = (p: any) => ({
+export const sanitizePaymentForDb = (p: any, tenantContext?: { schoolId?: string }) => ({
   id: toValidUuid(p.id),
-  school_id: toValidUuid(p.school_id || 'school-palmeraie-01'),
+  school_id: toValidUuid(p.school_id || tenantContext?.schoolId || DEFAULT_SCHOOL_ID),
   student_id: toValidUuid(p.student_id || 'std-001'),
   fee_type_id: null,
   amount: Number(p.amount) || 0,
@@ -84,9 +102,10 @@ export const sanitizePaymentForDb = (p: any) => ({
   created_by: null
 });
 
-export const sanitizeParentForDb = (prt: any) => ({
+export const sanitizeParentForDb = (prt: any, tenantContext?: { organizationId?: string; schoolId?: string }) => ({
   id: toValidUuid(prt.id),
-  school_id: toValidUuid(prt.school_id || 'school-palmeraie-01'),
+  organization_id: toValidUuid(prt.organization_id || tenantContext?.organizationId || DEFAULT_ORGANIZATION_ID),
+  school_id: toValidUuid(prt.school_id || tenantContext?.schoolId || DEFAULT_SCHOOL_ID),
   user_id: null,
   first_name: prt.first_name || '',
   last_name: prt.last_name || '',
@@ -96,9 +115,9 @@ export const sanitizeParentForDb = (prt: any) => ({
   address: prt.address || null
 });
 
-export const sanitizeTeacherForDb = (t: any) => ({
+export const sanitizeTeacherForDb = (t: any, tenantContext?: { schoolId?: string }) => ({
   id: toValidUuid(t.id),
-  school_id: toValidUuid(t.school_id || 'school-palmeraie-01'),
+  school_id: toValidUuid(t.school_id || tenantContext?.schoolId || DEFAULT_SCHOOL_ID),
   user_id: null,
   first_name: t.first_name || '',
   last_name: t.last_name || '',
@@ -108,8 +127,10 @@ export const sanitizeTeacherForDb = (t: any) => ({
   status: t.is_active !== false ? 'active' : 'inactive'
 });
 
-export const sanitizeUserProfileForDb = (usr: any) => ({
+export const sanitizeUserProfileForDb = (usr: any, tenantContext?: { organizationId?: string; schoolId?: string }) => ({
   id: toValidUuid(usr.id),
+  organization_id: toValidUuid(usr.organization_id || tenantContext?.organizationId || DEFAULT_ORGANIZATION_ID),
+  school_id: toValidUuid(usr.school_id || tenantContext?.schoolId || DEFAULT_SCHOOL_ID),
   first_name: usr.first_name || '',
   last_name: usr.last_name || '',
   email: usr.email || `${toValidUuid(usr.id)}@saintviateur.ci`,
@@ -468,6 +489,7 @@ export const supabaseService = {
   },
 
   async saveStudent(student: Partial<Student>) {
+    const tenantContext = await getCurrentTenantContext();
     const current = await this.fetchStudents();
     const existingIndex = current.findIndex(s => s.id === student.id);
     let updated: Student[];
@@ -489,7 +511,7 @@ export const supabaseService = {
     }
 
     try {
-      const dbPayload = sanitizeStudentForDb(student);
+      const dbPayload = sanitizeStudentForDb(student, tenantContext);
       const { error } = await supabase.from('students').upsert(dbPayload);
       if (error) console.error('[Supabase Student Sync Error]:', error);
     } catch (e) {
@@ -655,6 +677,7 @@ export const supabaseService = {
   },
 
   async saveClass(cls: Partial<SchoolClass>) {
+    const tenantContext = await getCurrentTenantContext();
     const current = await this.fetchClasses();
     const existingIndex = current.findIndex(c => c.id === cls.id);
     let updated: SchoolClass[];
@@ -666,7 +689,7 @@ export const supabaseService = {
     setLocalCache('classes', updated);
 
     try {
-      const dbPayload = sanitizeClassForDb(cls);
+      const dbPayload = sanitizeClassForDb(cls, tenantContext);
       const { error } = await supabase.from('classes').upsert(dbPayload);
       if (error) console.error('[Supabase Class Sync Error]:', error);
     } catch (e) {
@@ -948,13 +971,13 @@ export const supabaseService = {
       const rawStaff = await this.fetchStaff();
       const rawPayments = await this.fetchPayments();
 
-      const schools = rawSchools.map(sanitizeSchoolForDb);
-      const classes = rawClasses.map(sanitizeClassForDb);
-      const subjects = rawSubjects.map(sanitizeSubjectForDb);
-      const students = rawStudents.map(sanitizeStudentForDb);
-      const parents = rawParents.map(sanitizeParentForDb);
-      const teachers = rawStaff.map(sanitizeTeacherForDb);
-      const payments = rawPayments.map(sanitizePaymentForDb);
+      const schools = rawSchools.map(sch => sanitizeSchoolForDb(sch));
+      const classes = rawClasses.map(cls => sanitizeClassForDb(cls));
+      const subjects = rawSubjects.map(sbj => sanitizeSubjectForDb(sbj));
+      const students = rawStudents.map(std => sanitizeStudentForDb(std));
+      const parents = rawParents.map(prt => sanitizeParentForDb(prt));
+      const teachers = rawStaff.map(t => sanitizeTeacherForDb(t));
+      const payments = rawPayments.map(p => sanitizePaymentForDb(p));
 
       const resSchools = await supabase.from('schools').upsert(schools);
       if (resSchools.error) return { success: false, message: `Erreur Écoles (${resSchools.error.code}): ${resSchools.error.message}` };

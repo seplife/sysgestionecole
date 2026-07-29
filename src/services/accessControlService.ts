@@ -151,7 +151,7 @@ export const accessControlService = {
       role: user.role,
       school_status: schoolStatus,
       subscription_status: subscription.status,
-      plan: plan?.name || subscription.plan_name || 'Abonnement Actif',
+      plan: plan?.name || (subscription as any)?.plan_name || 'Abonnement Actif',
       max_students: plan?.max_students ?? 200,
       reason: 'ACCESS_GRANTED',
       message: 'Accès au dashboard autorisé.'

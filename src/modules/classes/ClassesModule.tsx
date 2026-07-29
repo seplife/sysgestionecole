@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { GraduationCap, BookOpen, Users, Plus, Edit2, Trash2, Shield, Settings, X, Save } from 'lucide-react';
 import { SchoolClass, Subject, Student } from '../../types/database';
 import { supabaseService } from '../../services/supabaseService';
+import { useTenant } from '../../context/TenantContext';
+import { DEFAULT_SCHOOL_ID } from '../../services/tenantService';
 
 export const ClassesModule: React.FC = () => {
+  const { currentSchool } = useTenant();
   const [classesList, setClassesList] = useState<SchoolClass[]>([]);
   const [subjectsList, setSubjectsList] = useState<Subject[]>([]);
   const [studentsList, setStudentsList] = useState<Student[]>([]);
@@ -43,7 +46,7 @@ export const ClassesModule: React.FC = () => {
     e.preventDefault();
     const created: SchoolClass = {
       id: `cls-${Date.now()}`,
-      school_id: 'school-palmeraie-01',
+      school_id: currentSchool.id || DEFAULT_SCHOOL_ID,
       academic_year_id: 'ay-2025-2026',
       level_id: 'lvl-gen',
       level_name: newClass.level_name,
@@ -79,7 +82,7 @@ export const ClassesModule: React.FC = () => {
     e.preventDefault();
     const created: Subject = {
       id: `sbj-${Date.now()}`,
-      school_id: 'school-palmeraie-01',
+      school_id: currentSchool.id || DEFAULT_SCHOOL_ID,
       code: newSubject.code.toUpperCase(),
       name: newSubject.name,
       category: newSubject.category,

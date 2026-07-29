@@ -69,13 +69,6 @@ export const RegistrationWizardModule: React.FC<RegistrationWizardProps> = ({
     }
   };
 
-  const generateMatricule = () => {
-    const year = new Date().getFullYear().toString().slice(-2);
-    const randDigits = Math.floor(100000 + Math.random() * 900000);
-    const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-    return `${year}${randDigits}${letter}`;
-  };
-
   const handleNext = () => {
     if (step < 4) setStep(step + 1);
   };
@@ -90,8 +83,8 @@ export const RegistrationWizardModule: React.FC<RegistrationWizardProps> = ({
 
     const newStudent: Student = {
       id: `std-${Date.now()}`,
-      organization_id: 'org-saint-viateur-01',
-      school_id: 'school-palmeraie-01',
+      organization_id: organization.id || DEFAULT_ORGANIZATION_ID,
+      school_id: currentSchool.id || DEFAULT_SCHOOL_ID,
       registration_number: formData.registrationNumber || generateMatricule(),
       first_name: formData.firstName || 'Grace Emmanuelle',
       last_name: formData.lastName || 'KOUASSI',

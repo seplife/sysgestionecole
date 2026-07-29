@@ -1,20 +1,21 @@
 import { supabase } from '../lib/supabase';
 import { getLocalCache, setLocalCache, toValidUuid } from './supabaseService';
 import { Department, ServiceUnit, Position, Employee, EmployeeContract, EmployeeAttendance, LeaveType, LeaveRequest } from '../types';
+import { DEFAULT_SCHOOL_ID } from './tenantService';
 
 // Initial seeds for demo/offline
 const initialDepartments: Department[] = [
-  { id: 'dept-01', school_id: 'school-palmeraie-01', code: 'PEDAGOGIE', name: 'Direction des Études & Pédagogie', description: 'Enseignement, programmes et suivi des classes' },
-  { id: 'dept-02', school_id: 'school-palmeraie-01', code: 'ADMIN', name: 'Administration & Secrétariat', description: 'Gestion administrative et scolarité' },
-  { id: 'dept-03', school_id: 'school-palmeraie-01', code: 'FINANCE', name: 'Comptabilité & Intendance', description: 'Gestion financière, paie et recouvrement' },
-  { id: 'dept-04', school_id: 'school-palmeraie-01', code: 'TECH', name: 'Informatique & Services Techniques', description: 'Maintenance, réseau et sécurité' }
+  { id: 'dept-01', school_id: DEFAULT_SCHOOL_ID, code: 'PEDAGOGIE', name: 'Direction des Études & Pédagogie', description: 'Enseignement, programmes et suivi des classes' },
+  { id: 'dept-02', school_id: DEFAULT_SCHOOL_ID, code: 'ADMIN', name: 'Administration & Secrétariat', description: 'Gestion administrative et scolarité' },
+  { id: 'dept-03', school_id: DEFAULT_SCHOOL_ID, code: 'FINANCE', name: 'Comptabilité & Intendance', description: 'Gestion financière, paie et recouvrement' },
+  { id: 'dept-04', school_id: DEFAULT_SCHOOL_ID, code: 'TECH', name: 'Informatique & Services Techniques', description: 'Maintenance, réseau et sécurité' }
 ];
 
 const initialPositions: Position[] = [
-  { id: 'pos-01', school_id: 'school-palmeraie-01', title: 'Professeur Titulaire (Lycée)', code: 'ENS_LYCEE', category: 'Pédagogique', base_salary_min: 250000, base_salary_max: 450000 },
-  { id: 'pos-02', school_id: 'school-palmeraie-01', title: 'Éducateur de Niveau', code: 'EDUC', category: 'Pédagogique', base_salary_min: 200000, base_salary_max: 350000 },
-  { id: 'pos-03', school_id: 'school-palmeraie-01', title: 'Chef Comptable', code: 'COMPT_CHEF', category: 'Administratif', base_salary_min: 350000, base_salary_max: 600000 },
-  { id: 'pos-04', school_id: 'school-palmeraie-01', title: 'Surveillant Général', code: 'SURV_GEN', category: 'Administratif', base_salary_min: 180000, base_salary_max: 280000 }
+  { id: 'pos-01', school_id: DEFAULT_SCHOOL_ID, title: 'Professeur Titulaire (Lycée)', code: 'ENS_LYCEE', category: 'Pédagogique', base_salary_min: 250000, base_salary_max: 450000 },
+  { id: 'pos-02', school_id: DEFAULT_SCHOOL_ID, title: 'Éducateur de Niveau', code: 'EDUC', category: 'Pédagogique', base_salary_min: 200000, base_salary_max: 350000 },
+  { id: 'pos-03', school_id: DEFAULT_SCHOOL_ID, title: 'Chef Comptable', code: 'COMPT_CHEF', category: 'Administratif', base_salary_min: 350000, base_salary_max: 600000 },
+  { id: 'pos-04', school_id: DEFAULT_SCHOOL_ID, title: 'Surveillant Général', code: 'SURV_GEN', category: 'Administratif', base_salary_min: 180000, base_salary_max: 280000 }
 ];
 
 const initialEmployees: Employee[] = [
@@ -177,7 +178,7 @@ export const hrService = {
       const payload = {
         ...employee,
         id: toValidUuid(employee.id),
-        school_id: toValidUuid(employee.school_id || 'school-palmeraie-01')
+        school_id: toValidUuid(employee.school_id || DEFAULT_SCHOOL_ID)
       };
       await supabase.from('employees').upsert(payload);
     } catch (e) {
