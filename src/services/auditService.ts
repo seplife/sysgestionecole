@@ -8,9 +8,14 @@ import { getCurrentTenantContext } from './tenantService';
 
 export interface AuditLogEntry {
   id?: string;
+  organization_id?: string | null;
   school_id?: string;
   user_id?: string;
-  table_name: string;
+  /** Nouveau champ migration 009 : type d'entité (ex : 'classes', 'students') */
+  entity_type?: string | null;
+  /** Nouveau champ migration 009 : UUID de l'entité concernée */
+  entity_id?: string | null;
+  table_name?: string;
   record_id?: string | null;
   action: 'INSERT' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | string;
   old_data?: Record<string, any> | null;
@@ -33,11 +38,20 @@ export const auditService = {
     try {
       const tenant = await getCurrentTenantContext();
 
+      // Résoudre entity_type / table_name par rétro-compatibilité
+      const resolvedEntityType = entry.entity_type || entry.table_name || null;
+      const resolvedTableName  = entry.table_name  || entry.entity_type  || 'unknown';
+      const resolvedEntityId   = entry.entity_id   || entry.record_id    || null;
+      const resolvedRecordId   = entry.record_id   || entry.entity_id    || null;
+
       const payload = {
+        organization_id: entry.organization_id || tenant.organizationId || null,
         school_id: entry.school_id || tenant.schoolId,
         user_id: entry.user_id || tenant.userId || null,
-        table_name: entry.table_name || 'unknown',
-        record_id: entry.record_id || null,
+        entity_type: resolvedEntityType,
+        entity_id: resolvedEntityId,
+        table_name: resolvedTableName,
+        record_id: resolvedRecordId,
         action: entry.action || 'UPDATE',
         old_data: entry.old_data || null,
         new_data: entry.new_data || null,
