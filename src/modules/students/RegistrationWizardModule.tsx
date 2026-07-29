@@ -3,6 +3,7 @@ import {
   UserPlus, Upload, Sparkles, ArrowRight, ArrowLeft, CheckCircle2 
 } from 'lucide-react';
 import { Student, SchoolClass } from '../../types/database';
+import { studentService } from '../../services/studentService';
 import { supabaseService } from '../../services/supabaseService';
 import { useTenant } from '../../context/TenantContext';
 import { DEFAULT_ORGANIZATION_ID, DEFAULT_SCHOOL_ID } from '../../services/tenantService';
@@ -21,6 +22,8 @@ export const RegistrationWizardModule: React.FC<RegistrationWizardProps> = ({
   const { currentSchool, organization } = useTenant();
   const [step, setStep] = useState<number>(1);
   const [classes, setClasses] = useState<SchoolClass[]>(classesList || []);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const generateMatricule = () => {
     const year = new Date().getFullYear().toString().slice(-2);
@@ -87,29 +90,45 @@ export const RegistrationWizardModule: React.FC<RegistrationWizardProps> = ({
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const selectedClassName = formData.targetClass || (classes[0]?.name ?? 'Non affectée');
+    setIsSubmitting(true);
+    setSubmitError(null);
 
-    const newStudent: Student = {
-      id: `std-${Date.now()}`,
-      organization_id: organization.id || DEFAULT_ORGANIZATION_ID,
-      school_id: currentSchool.id || DEFAULT_SCHOOL_ID,
-      registration_number: formData.registrationNumber || generateMatricule(),
-      first_name: formData.firstName || 'Grace Emmanuelle',
-      last_name: formData.lastName || 'KOUASSI',
-      date_of_birth: formData.dateOfBirth,
-      place_of_birth: formData.placeOfBirth,
-      gender: formData.gender as 'M' | 'F',
-      nationality: 'Ivoirienne',
-      blood_group: formData.bloodGroup,
-      status: 'Inscrit',
-      current_class_name: selectedClassName,
-      address: formData.address,
-      photo_url: formData.photoUrl
-    };
+    try {
+      const selectedClassName = formData.targetClass || (classes[0]?.name ?? 'Non affectée');
 
-    onComplete(newStudent);
+      const newStudent: Student = {
+        id: crypto.randomUUID(),
+        organization_id: organization.id || DEFAULT_ORGANIZATION_ID,
+        school_id: currentSchool.id || DEFAULT_SCHOOL_ID,
+        registration_number: formData.registrationNumber || generateMatricule(),
+        first_name: formData.firstName || 'Grace Emmanuelle',
+        last_name: formData.lastName || 'KOUASSI',
+        date_of_birth: formData.dateOfBirth,
+        place_of_birth: formData.placeOfBirth,
+        gender: formData.gender as 'M' | 'F',
+        nationality: 'Ivoirienne',
+        blood_group: formData.bloodGroup,
+        status: 'Inscrit',
+        current_class_name: selectedClassName,
+        address: formData.address,
+        photo_url: formData.photoUrl
+      };
+
+      const result = await studentService.saveStudent(newStudent);
+
+      if (!result.success && result.status === 'ERROR') {
+        setSubmitError(result.error || 'Erreur lors de l\'enregistrement de l\'élève.');
+        return;
+      }
+
+      onComplete(result.data || newStudent);
+    } catch (e: any) {
+      setSubmitError(e?.message || 'Une erreur inattendue est survenue.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Extraire les niveaux dynamiquement à partir des classes réelles enregistrées

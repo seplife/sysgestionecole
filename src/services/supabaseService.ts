@@ -1,6 +1,8 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Student, Parent, SchoolClass, Subject, UserProfile, PaymentTransaction, School, Organization, AcademicYear, AttendanceRecord } from '../types/database';
 import { getCurrentTenantContext, DEFAULT_ORGANIZATION_ID, DEFAULT_SCHOOL_ID } from './tenantService';
+import { studentService } from './studentService';
+import { classService } from './classService';
 
 export const toValidUuid = (str: string | undefined | null): string => {
   if (!str || typeof str !== 'string' || str.trim() === '') {
@@ -536,77 +538,17 @@ export const supabaseService = {
 
   // 2. Students
   async fetchStudents(): Promise<Student[]> {
-    try {
-      const { data, error } = await supabase.from('students').select('*').order('created_at', { ascending: false });
-      if (error) {
-        console.warn('[Supabase Fetch Students Error]:', error.code, error.message);
-        return getLocalCache('students', []);
-      }
-      const result = (data as Student[]) || [];
-      setLocalCache('students', result);
-      return result;
-    } catch (e) {
-      console.warn('[Supabase Fetch Students Exception]:', e);
-      return getLocalCache('students', []);
-    }
+    return studentService.fetchStudents();
   },
 
-  async saveStudent(student: Partial<Student>) {
-    const tenantContext = await getCurrentTenantContext();
-    const current = await this.fetchStudents();
-    const existingIndex = current.findIndex(s => s.id === student.id);
-    let updated: Student[];
-    if (existingIndex >= 0) {
-      updated = current.map(s => s.id === student.id ? { ...s, ...student } as Student : s);
-    } else {
-      updated = [student as Student, ...current];
-    }
-    setLocalCache('students', updated);
-
-    // Sync student_count on classes cache
-    const cachedClasses = getLocalCache<SchoolClass[]>('classes', initialClasses);
-    if (cachedClasses && cachedClasses.length > 0) {
-      const updatedClasses = cachedClasses.map(cls => {
-        const count = updated.filter(s => s.current_class_name === cls.name).length;
-        return { ...cls, student_count: count };
-      });
-      setLocalCache('classes', updatedClasses);
-    }
-
-    try {
-      const dbPayload = sanitizeStudentForDb(student, tenantContext);
-      await ensureSchoolExists(dbPayload.school_id, dbPayload.organization_id);
-      const { error } = await supabase.from('students').upsert(dbPayload);
-      if (error) console.error('[Supabase Student Sync Error]:', error);
-    } catch (e) {
-      console.error('[Supabase Student Sync Exception]:', e);
-    }
-    return updated;
+  async saveStudent(student: Partial<Student>): Promise<Student[]> {
+    await studentService.saveStudent(student);
+    return studentService.fetchStudents();
   },
 
-  async deleteStudent(id: string) {
-    const current = await this.fetchStudents();
-    const updated = current.filter(s => s.id !== id);
-    setLocalCache('students', updated);
-
-    // Sync student_count on classes cache
-    const cachedClasses = getLocalCache<SchoolClass[]>('classes', initialClasses);
-    if (cachedClasses && cachedClasses.length > 0) {
-      const updatedClasses = cachedClasses.map(cls => {
-        const count = updated.filter(s => s.current_class_name === cls.name).length;
-        return { ...cls, student_count: count };
-      });
-      setLocalCache('classes', updatedClasses);
-    }
-
-    try {
-      const targetId = toValidUuid(id);
-      const { error } = await supabase.from('students').delete().eq('id', targetId);
-      if (error) console.error('[Supabase Delete Student Error]:', error);
-    } catch (e) {
-      console.error('[Supabase Delete Student Exception]:', e);
-    }
-    return updated;
+  async deleteStudent(id: string): Promise<Student[]> {
+    await studentService.deleteStudent(id);
+    return studentService.fetchStudents();
   },
 
   // 3. Parents
@@ -716,66 +658,17 @@ export const supabaseService = {
   },
 
   async fetchClasses(): Promise<SchoolClass[]> {
-    let classes: SchoolClass[] = [];
-    try {
-      const { data, error } = await supabase.from('classes').select('*').order('name');
-      if (!error && data && data.length > 0) {
-        classes = data as SchoolClass[];
-      }
-    } catch (e) {
-      console.warn('[Supabase Fetch Classes Error]:', e);
-    }
-
-    if (classes.length === 0) {
-      classes = getLocalCache('classes', initialClasses);
-    }
-
-    const students = getLocalCache<Student[]>('students', initialStudents);
-    const updatedClasses = classes.map(cls => {
-      const realCount = students.filter(s => s.current_class_name === cls.name).length;
-      return { ...cls, student_count: realCount };
-    });
-
-    setLocalCache('classes', updatedClasses);
-    return updatedClasses;
+    return classService.fetchClasses();
   },
 
-  async saveClass(cls: Partial<SchoolClass>) {
-    const tenantContext = await getCurrentTenantContext();
-    const current = await this.fetchClasses();
-    const existingIndex = current.findIndex(c => c.id === cls.id);
-    let updated: SchoolClass[];
-    if (existingIndex >= 0) {
-      updated = current.map(c => c.id === cls.id ? { ...c, ...cls } as SchoolClass : c);
-    } else {
-      updated = [...current, cls as SchoolClass];
-    }
-    setLocalCache('classes', updated);
-
-    try {
-      const dbPayload = sanitizeClassForDb(cls, tenantContext);
-      await ensureSchoolExists(dbPayload.school_id, undefined, dbPayload.level_id);
-      const { error } = await supabase.from('classes').upsert(dbPayload);
-      if (error) console.error('[Supabase Class Sync Error]:', error);
-    } catch (e) {
-      console.error('[Supabase Class Sync Exception]:', e);
-    }
-    return updated;
+  async saveClass(cls: Partial<SchoolClass>): Promise<SchoolClass[]> {
+    await classService.saveClass(cls);
+    return classService.fetchClasses();
   },
 
-  async deleteClass(id: string) {
-    const current = await this.fetchClasses();
-    const updated = current.filter(c => c.id !== id);
-    setLocalCache('classes', updated);
-
-    try {
-      const targetId = toValidUuid(id);
-      const { error } = await supabase.from('classes').delete().eq('id', targetId);
-      if (error) console.error('[Supabase Delete Class Error]:', error);
-    } catch (e) {
-      console.error('[Supabase Delete Class Exception]:', e);
-    }
-    return updated;
+  async deleteClass(id: string): Promise<SchoolClass[]> {
+    await classService.deleteClass(id);
+    return classService.fetchClasses();
   },
 
   // 6. Subjects

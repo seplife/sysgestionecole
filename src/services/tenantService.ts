@@ -18,6 +18,8 @@ export interface TenantContext {
 export const DEFAULT_ORGANIZATION_ID = '00000000-0000-4000-8000-000000000000';
 export const DEFAULT_SCHOOL_ID = '00000000-0000-4000-8000-000000000001';
 
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 /**
  * Récupère le contexte d'organisation et d'école de l'utilisateur actuellement connecté
  */
@@ -37,7 +39,6 @@ export async function getCurrentTenantContext(): Promise<TenantContext> {
     const { data: authData, error: authError } = await supabase.auth.getUser();
 
     if (authError || !authData.user) {
-      console.warn('[TenantService] Aucun utilisateur Supabase Auth connecté.');
       return {
         userId: 'anonymous-user',
         organizationId: DEFAULT_ORGANIZATION_ID,
@@ -56,8 +57,8 @@ export async function getCurrentTenantContext(): Promise<TenantContext> {
       .eq('id', userId)
       .maybeSingle();
 
-    let organizationId = profile?.organization_id || '';
-    let schoolId = profile?.school_id || '';
+    let organizationId = (profile?.organization_id && uuidRegex.test(profile.organization_id)) ? profile.organization_id : '';
+    let schoolId = (profile?.school_id && uuidRegex.test(profile.school_id)) ? profile.school_id : '';
     let role = profile?.role || 'directeur';
     let isSuperAdmin = Boolean(profile?.is_super_admin);
 
@@ -68,14 +69,14 @@ export async function getCurrentTenantContext(): Promise<TenantContext> {
         .select('id')
         .limit(1);
 
-      if (orgs && orgs.length > 0) {
+      if (orgs && orgs.length > 0 && uuidRegex.test(orgs[0].id)) {
         organizationId = orgs[0].id;
       } else {
         organizationId = DEFAULT_ORGANIZATION_ID;
       }
     }
 
-    // 4. Si l'école est manquante, consulter school_members ou la table schools
+    // 4. Si l'école est manquante, consulter school_members
     if (!schoolId) {
       const { data: member } = await supabase
         .from('school_members')
@@ -85,7 +86,7 @@ export async function getCurrentTenantContext(): Promise<TenantContext> {
         .limit(1)
         .maybeSingle();
 
-      if (member?.school_id) {
+      if (member?.school_id && uuidRegex.test(member.school_id)) {
         schoolId = member.school_id;
         if (member.role) role = member.role;
       } else {
@@ -94,7 +95,7 @@ export async function getCurrentTenantContext(): Promise<TenantContext> {
           .select('id')
           .limit(1);
 
-        if (schs && schs.length > 0) {
+        if (schs && schs.length > 0 && uuidRegex.test(schs[0].id)) {
           schoolId = schs[0].id;
         } else {
           schoolId = DEFAULT_SCHOOL_ID;
