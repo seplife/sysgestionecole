@@ -139,6 +139,38 @@ export const sanitizeUserProfileForDb = (usr: any, tenantContext?: { organizatio
   role: usr.role || 'enseignant'
 });
 
+export const ensureSchoolExists = async (schoolId: string, organizationId?: string) => {
+  try {
+    const validSchoolId = toValidUuid(schoolId);
+    const validOrgId = toValidUuid(organizationId || DEFAULT_ORGANIZATION_ID);
+
+    // 1. Garanti l'existence de l'organisation parente
+    await supabase.from('organizations').upsert({
+      id: validOrgId,
+      name: 'Groupe Scolaire Saint-Viateur',
+      code: 'ORG-ST-VIATEUR',
+      country: 'Côte d\'Ivoire',
+      city: 'Abidjan',
+      plan_type: 'Enterprise',
+      is_active: true
+    }, { onConflict: 'id' });
+
+    // 2. Garanti l'existence de l'école dans public.schools
+    await supabase.from('schools').upsert({
+      id: validSchoolId,
+      organization_id: validOrgId,
+      name: 'COLLÈGE CATHOLIQUE SAINT-VIATEUR',
+      slug: `saint-viateur-${validSchoolId.slice(0, 8)}`,
+      status: 'active',
+      school_type: 'Prive',
+      city: 'Abidjan',
+      country: 'Côte d\'Ivoire'
+    }, { onConflict: 'id' });
+  } catch (e) {
+    console.warn('[Supabase ensureSchoolExists Exception]:', e);
+  }
+};
+
 // Initial default seeds used ONLY on first setup if Supabase & LocalStorage are completely empty
 const initialSchools: School[] = [
   {
@@ -512,6 +544,7 @@ export const supabaseService = {
 
     try {
       const dbPayload = sanitizeStudentForDb(student, tenantContext);
+      await ensureSchoolExists(dbPayload.school_id, dbPayload.organization_id);
       const { error } = await supabase.from('students').upsert(dbPayload);
       if (error) console.error('[Supabase Student Sync Error]:', error);
     } catch (e) {
@@ -690,6 +723,7 @@ export const supabaseService = {
 
     try {
       const dbPayload = sanitizeClassForDb(cls, tenantContext);
+      await ensureSchoolExists(dbPayload.school_id);
       const { error } = await supabase.from('classes').upsert(dbPayload);
       if (error) console.error('[Supabase Class Sync Error]:', error);
     } catch (e) {
