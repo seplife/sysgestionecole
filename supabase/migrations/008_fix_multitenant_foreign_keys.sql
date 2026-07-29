@@ -91,4 +91,15 @@ VALUES
   ('00000000-0000-4000-8000-00000000007e'::uuid, '00000000-0000-4000-8000-000000000001'::uuid, 'Terminale', 'Secondaire_Second_Cycle', 7)
 ON CONFLICT (id) DO NOTHING;
 
+-- 5. Ajout défensif de la colonne entity_type à audit_logs
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'audit_logs' AND column_name = 'entity_type'
+  ) THEN
+    ALTER TABLE public.audit_logs ADD COLUMN entity_type VARCHAR(50);
+  END IF;
+END $$;
+
 COMMIT;

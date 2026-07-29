@@ -139,7 +139,7 @@ export const sanitizeUserProfileForDb = (usr: any, tenantContext?: { organizatio
   role: usr.role || 'enseignant'
 });
 
-export const ensureSchoolExists = async (schoolId: string, organizationId?: string) => {
+export const ensureSchoolExists = async (schoolId: string, organizationId?: string, targetLevelId?: string) => {
   try {
     const validSchoolId = toValidUuid(schoolId);
     const validOrgId = toValidUuid(organizationId || DEFAULT_ORGANIZATION_ID);
@@ -179,15 +179,24 @@ export const ensureSchoolExists = async (schoolId: string, organizationId?: stri
       is_current: true
     }, { onConflict: 'id' });
 
-    // 4. Garanti l'existence des niveaux par défaut dans public.levels
-    const defaultLevelId = toValidUuid('lvl-6e');
-    await supabase.from('levels').upsert({
-      id: defaultLevelId,
-      school_id: validSchoolId,
-      name: '6ème',
-      cycle: 'Secondaire_Premier_Cycle',
-      order_index: 1
-    }, { onConflict: 'id' });
+    // 4. Garanti l'existence des niveaux scolaires dans public.levels
+    const defaultLevels = [
+      { id: toValidUuid('lvl-6e'), name: '6ème', cycle: 'Secondaire_Premier_Cycle', order_index: 1 },
+      { id: toValidUuid('lvl-5e'), name: '5ème', cycle: 'Secondaire_Premier_Cycle', order_index: 2 },
+      { id: toValidUuid('lvl-4e'), name: '4ème', cycle: 'Secondaire_Premier_Cycle', order_index: 3 },
+      { id: toValidUuid('lvl-3e'), name: '3ème', cycle: 'Secondaire_Premier_Cycle', order_index: 4 },
+      { id: toValidUuid('lvl-2nd'), name: 'Seconde', cycle: 'Secondaire_Second_Cycle', order_index: 5 },
+      { id: toValidUuid('lvl-1ere'), name: 'Première', cycle: 'Secondaire_Second_Cycle', order_index: 6 },
+      { id: toValidUuid('lvl-tle'), name: 'Terminale', cycle: 'Secondaire_Second_Cycle', order_index: 7 },
+      { id: toValidUuid('lvl-gen'), name: 'Général', cycle: 'Secondaire_Premier_Cycle', order_index: 8 },
+    ];
+
+    if (targetLevelId && !defaultLevels.some(l => l.id === targetLevelId)) {
+      defaultLevels.push({ id: targetLevelId, name: 'Niveau Scolaire', cycle: 'Secondaire_Premier_Cycle', order_index: 9 });
+    }
+
+    const levelsToUpsert = defaultLevels.map(l => ({ ...l, school_id: validSchoolId }));
+    await supabase.from('levels').upsert(levelsToUpsert, { onConflict: 'id' });
   } catch (e) {
     console.warn('[Supabase ensureSchoolExists Exception]:', e);
   }
@@ -745,7 +754,7 @@ export const supabaseService = {
 
     try {
       const dbPayload = sanitizeClassForDb(cls, tenantContext);
-      await ensureSchoolExists(dbPayload.school_id);
+      await ensureSchoolExists(dbPayload.school_id, undefined, dbPayload.level_id);
       const { error } = await supabase.from('classes').upsert(dbPayload);
       if (error) console.error('[Supabase Class Sync Error]:', error);
     } catch (e) {
