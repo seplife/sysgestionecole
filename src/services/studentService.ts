@@ -144,14 +144,13 @@ export const studentService = {
 
       // 3. Journaliser l'événement d'audit
       await auditService.logEvent({
-        organization_id: tenant.organizationId,
         school_id: tenant.schoolId,
         user_id: tenant.userId,
-        action: existingIdx >= 0 ? 'UPDATE' : 'STUDENT_REGISTERED',
-        entity_type: 'students',
-        entity_id: data?.id || fullStudent.id,
+        action: existingIdx >= 0 ? 'UPDATE' : 'INSERT',
+        table_name: 'students',
+        record_id: data?.id || fullStudent.id,
         new_data: data || payload
-      });
+      } as any);
 
       return {
         success: true,
@@ -195,13 +194,12 @@ export const studentService = {
       }
 
       await auditService.logEvent({
-        organization_id: tenant.organizationId,
         school_id: tenant.schoolId,
         user_id: tenant.userId,
         action: 'DELETE',
-        entity_type: 'students',
-        entity_id: id
-      });
+        table_name: 'students',
+        record_id: id
+      } as any);
 
       return { success: true, status: 'SYNCED', data: true };
     } catch (e: any) {
