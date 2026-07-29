@@ -10,7 +10,7 @@ export const toValidUuid = (str: string | undefined | null): string => {
   }
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (uuidRegex.test(str)) return str;
-  
+
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = ((hash << 5) - hash) + str.charCodeAt(i);
@@ -457,7 +457,7 @@ export const supabaseService = {
       if (!error && data && data.length > 0) {
         const isDefaultInitial = data.length === 1 && data[0].name === initialSchools[0].name;
         const isCacheCustomized = cached.some(s => s.name !== initialSchools[0].name || s.registration_number !== initialSchools[0].registration_number);
-        
+
         if (isCacheCustomized && isDefaultInitial) {
           return cached;
         }
@@ -541,13 +541,41 @@ export const supabaseService = {
     return studentService.fetchStudents();
   },
 
+  // ✅ CORRECTION : on garantit d'abord l'existence des FK (école/organisation/année/niveau)
+  // puis on récupère le ServiceResult renvoyé par studentService.saveStudent au lieu de
+  // l'ignorer. En cas d'échec de synchro Supabase, on lève une erreur explicite pour que
+  // l'UI puisse informer l'utilisateur (au lieu de faire croire que tout s'est bien passé
+  // alors que l'élève n'est resté qu'en local).
   async saveStudent(student: Partial<Student>): Promise<Student[]> {
-    await studentService.saveStudent(student);
+    try {
+      const tenant = await getCurrentTenantContext();
+      await ensureSchoolExists(
+        student.school_id || tenant.schoolId,
+        student.organization_id || tenant.organizationId
+      );
+    } catch (e) {
+      console.warn('[supabaseService.saveStudent] ensureSchoolExists warning:', e);
+    }
+
+    const result = await studentService.saveStudent(student);
+
+    if (!result.success) {
+      console.error('[supabaseService.saveStudent] Échec de synchronisation Supabase:', result.error);
+      throw new Error(result.error || 'Échec de la synchronisation Supabase pour cet élève.');
+    }
+
     return studentService.fetchStudents();
   },
 
+  // ✅ CORRECTION : même logique de propagation d'erreur pour la suppression
   async deleteStudent(id: string): Promise<Student[]> {
-    await studentService.deleteStudent(id);
+    const result = await studentService.deleteStudent(id);
+
+    if (!result.success) {
+      console.error('[supabaseService.deleteStudent] Échec:', result.error);
+      throw new Error(result.error || 'Échec de la suppression Supabase pour cet élève.');
+    }
+
     return studentService.fetchStudents();
   },
 

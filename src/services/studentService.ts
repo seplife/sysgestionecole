@@ -15,8 +15,8 @@ import { auditService } from './auditService';
 export function sanitizeStudentPayload(student: Partial<Student>, tenant: TenantContext) {
   // Générer un UUID d'identifiant valide si l'id n'est pas déjà un UUID
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  const validId = (student.id && uuidRegex.test(student.id)) 
-    ? student.id 
+  const validId = (student.id && uuidRegex.test(student.id))
+    ? student.id
     : crypto.randomUUID();
 
   return {
@@ -34,7 +34,7 @@ export function sanitizeStudentPayload(student: Partial<Student>, tenant: Tenant
     photo_url: student.photo_url || null,
     blood_group: student.blood_group || null,
     address: student.address || null,
-    status: ['Inscrit', 'Reinscrit', 'Transfere', 'Radie'].includes(student.status) ? student.status : 'Inscrit'
+    status: ['Inscrit', 'Reinscrit', 'Transfere', 'Radie'].includes(student.status as string) ? student.status : 'Inscrit'
   };
 }
 
@@ -115,6 +115,10 @@ export const studentService = {
     }
 
     // 2. Synchroniser vers la base de données distante Supabase
+    // NOTE : la garantie d'existence de l'école/organisation/année/niveau (FK)
+    // est faite en amont par supabaseService.saveStudent() via ensureSchoolExists()
+    // avant d'appeler cette fonction, pour éviter tout import circulaire entre
+    // studentService.ts et supabaseService.ts.
     try {
       const { data, error } = await supabase
         .from('students')
@@ -123,7 +127,13 @@ export const studentService = {
         .single();
 
       if (error) {
-        console.error('[StudentService Supabase Sync Error]:', error);
+        // ✅ Log détaillé pour diagnostiquer RLS / FK / type de colonne
+        console.error('[StudentService Supabase Sync Error]:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
         return {
           success: false,
           status: 'SYNC_PENDING',
