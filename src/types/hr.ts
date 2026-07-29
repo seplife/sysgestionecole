@@ -73,7 +73,7 @@ export interface Employee {
   contract_end_date?: string;
   
   base_salary: number;
-  payment_method: PaymentMethod;
+  payment_method: HrPaymentMethod;
   bank_name?: string;
   iban?: string;
   mobile_money_provider?: 'Wave' | 'Orange Money' | 'MTN MoMo' | 'Moov Money';
@@ -122,7 +122,7 @@ export interface EmployeeAttendance {
   date: string;
   check_in?: string;
   check_out?: string;
-  status: AttendanceStatus;
+  status: HrAttendanceStatus;
   late_minutes?: number;
   is_justified?: boolean;
   justification_reason?: string;

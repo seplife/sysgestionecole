@@ -1,4 +1,4 @@
-import { PaymentMethod } from './hr';
+import { HrPaymentMethod as PaymentMethod } from './hr';
 
 export type ExpenseStatus = 'brouillon' | 'soumis' | 'approuve' | 'paye' | 'rejete' | 'annule';
 export type RevenueStatus = 'en_attente' | 'encaisse' | 'annule';

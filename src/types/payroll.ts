@@ -1,4 +1,4 @@
-import { PaymentMethod } from './hr';
+import { HrPaymentMethod as PaymentMethod } from './hr';
 
 export type PayrollPeriodStatus = 'brouillon' | 'preparation' | 'calculee' | 'validee' | 'payee' | 'cloturee';
 export type ComponentCategory = 'gain' | 'retenue';

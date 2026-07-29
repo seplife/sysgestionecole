@@ -358,7 +358,7 @@ export interface SaasSubscriptionRecord {
 // EXAMS & HONOR ROLL INTERFACES
 // ------------------------------------------------------------
 
-export type ExamStatus = 'brouillon' | 'planifie' | 'en_cours' | 'termine' | 'publie' | 'annule';
+export type ExamStatus = 'brouillon' | 'planifie' | 'en_cours' | 'termine' | 'publie' | 'annule' | 'draft' | 'published' | 'completed' | 'in_progress';
 
 export interface Exam {
   id: string;
@@ -367,28 +367,37 @@ export interface Exam {
   exam_type: 'officiel' | 'blanc' | 'composition' | 'autre' | string;
   academic_year_id?: string;
   academic_term_id?: string | null;
+  level_id?: string | null;
+  class_id?: string | null;
+  series_id?: string | null;
   start_date?: string | null;
   end_date?: string | null;
   status: ExamStatus;
   description?: string | null;
+  subjects_count?: number;
+  candidates_count?: number;
   created_at?: string;
   updated_at?: string;
 }
 
 export interface ExamSubject {
   id: string;
+  school_id?: string;
   exam_id: string;
   subject_id: string;
   subject_name?: string;
   coefficient: number;
   max_score: number;
   exam_date?: string | null;
+  is_optional?: boolean;
 }
 
 export interface ExamCandidate {
   id: string;
+  school_id?: string;
   exam_id: string;
   student_id: string;
+  class_id?: string;
   registration_number?: string;
   student_name?: string;
   class_name?: string;
@@ -396,20 +405,29 @@ export interface ExamCandidate {
 
 export interface ExamGrade {
   id: string;
+  school_id?: string;
   exam_id: string;
-  exam_subject_id: string;
+  exam_subject_id?: string;
+  subject_id?: string;
   student_id: string;
   score: number;
   comment?: string | null;
+  is_absent?: boolean;
 }
 
 export interface ExamResult {
   id: string;
+  school_id?: string;
   exam_id: string;
   student_id: string;
+  student_name?: string;
+  registration_number?: string;
+  class_name?: string;
   total_score?: number;
   average_score?: number;
+  average?: number;
   rank?: number | null;
+  rank_level?: number | null;
   mention?: string | null;
   decision?: 'admis' | 'ajourne' | 'rattrapage' | string;
 }
@@ -418,13 +436,16 @@ export interface HonorRollConfig {
   id: string;
   school_id: string;
   min_average: number;
+  max_average?: number;
   title: string;
 }
 
 export interface HonorRoll {
   id: string;
   school_id: string;
+  academic_year_id?: string;
   academic_term_id?: string;
+  period_type?: string;
   class_id?: string;
   created_at?: string;
 }
@@ -443,18 +464,41 @@ export interface Award {
   id: string;
   school_id: string;
   student_id: string;
+  student_name?: string;
+  registration_number?: string;
+  class_name?: string;
   award_type: string;
   title: string;
+  subject_id?: string;
+  subject_name?: string;
   date_given?: string;
+  awarded_at?: string;
+  description?: string;
+  academic_year_id?: string;
+  academic_term_id?: string;
+  average?: number;
+  progression_delta?: number;
+  rank?: number;
 }
 
 export interface Certificate {
   id: string;
   school_id: string;
   student_id: string;
+  student_name?: string;
+  registration_number?: string;
+  class_name?: string;
+  exam_id?: string;
+  exam_name?: string;
   certificate_number?: string;
+  certificate_type?: string;
   title: string;
   issue_date?: string;
+  issued_at?: string;
+  average?: number;
+  rank?: number;
+  mention?: string;
+  verification_code?: string;
 }
 
 // ------------------------------------------------------------
