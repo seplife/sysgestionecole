@@ -14,7 +14,8 @@ export const isSupabaseConfigured = (): boolean => {
     SUPABASE_URL.startsWith('https://') &&
     SUPABASE_URL.includes('.supabase.co') &&
     SUPABASE_ANON_KEY &&
-    SUPABASE_ANON_KEY.startsWith('eyJ') // JWT Supabase réel
+    SUPABASE_ANON_KEY.startsWith('eyJ') // JWT Supabase 
+
   );
 };
 
