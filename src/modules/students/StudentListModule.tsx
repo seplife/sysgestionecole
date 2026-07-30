@@ -357,7 +357,7 @@ export const StudentListModule: React.FC = () => {
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Date de Naissance</label>
                   <input 
                     type="date" 
-                    value={editingStudent.date_of_birth}
+                    value={editingStudent.date_of_birth || ''}
                     onChange={(e) => setEditingStudent({...editingStudent, date_of_birth: e.target.value})}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl"
                   />
@@ -367,7 +367,7 @@ export const StudentListModule: React.FC = () => {
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Lieu de Naissance</label>
                   <input 
                     type="text" 
-                    value={editingStudent.place_of_birth}
+                    value={editingStudent.place_of_birth || ''}
                     onChange={(e) => setEditingStudent({...editingStudent, place_of_birth: e.target.value})}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl"
                   />

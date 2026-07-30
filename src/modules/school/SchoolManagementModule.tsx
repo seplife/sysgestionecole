@@ -116,7 +116,7 @@ export const SchoolManagementModule: React.FC = () => {
                 <input 
                   type="text" 
                   required
-                  value={formData.registration_number} 
+                  value={formData.registration_number || ''} 
                   onChange={(e) => setFormData({ ...formData, registration_number: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl font-mono font-bold text-brand-600" 
                 />
@@ -125,7 +125,7 @@ export const SchoolManagementModule: React.FC = () => {
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Type d'Établissement</label>
                 <select 
-                  value={formData.school_type} 
+                  value={formData.school_type || 'Prive'} 
                   onChange={(e) => setFormData({ ...formData, school_type: e.target.value as any })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl font-bold"
                 >
@@ -140,7 +140,7 @@ export const SchoolManagementModule: React.FC = () => {
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Devise de l'École</label>
               <input 
                 type="text" 
-                value={formData.motto} 
+                value={formData.motto || ''} 
                 onChange={(e) => setFormData({ ...formData, motto: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl italic font-medium" 
               />
@@ -156,7 +156,7 @@ export const SchoolManagementModule: React.FC = () => {
                 <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">Nom du Directeur / Chef d'Établissement *</label>
                 <input 
                   type="text" 
-                  value={formData.director_name} 
+                  value={formData.director_name || ''} 
                   onChange={(e) => setFormData({ ...formData, director_name: e.target.value })}
                   className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border rounded-xl font-bold text-slate-900 dark:text-white" 
                 />
@@ -180,7 +180,7 @@ export const SchoolManagementModule: React.FC = () => {
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Téléphone Secrétariat</label>
                 <input 
                   type="text" 
-                  value={formData.phone} 
+                  value={formData.phone || ''} 
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl font-mono" 
                 />
@@ -190,7 +190,7 @@ export const SchoolManagementModule: React.FC = () => {
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Numéro WhatsApp Officiel</label>
                 <input 
                   type="text" 
-                  value={formData.whatsapp} 
+                  value={formData.whatsapp || ''} 
                   onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl font-mono text-emerald-600 font-bold" 
                 />
@@ -202,7 +202,7 @@ export const SchoolManagementModule: React.FC = () => {
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Adresse Postale & Physique</label>
                 <input 
                   type="text" 
-                  value={formData.address} 
+                  value={formData.address || ''} 
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl" 
                 />
@@ -212,7 +212,7 @@ export const SchoolManagementModule: React.FC = () => {
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Ville / Commune</label>
                 <input 
                   type="text" 
-                  value={formData.city} 
+                  value={formData.city || ''} 
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl" 
                 />

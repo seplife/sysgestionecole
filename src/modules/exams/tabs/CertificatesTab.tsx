@@ -42,8 +42,8 @@ export const CertificatesTab: React.FC<CertificatesTabProps> = ({ schoolId, onOp
 
   const filteredCertificates = certificates.filter(c => 
     c.student_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.certificate_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.verification_code.toLowerCase().includes(searchTerm.toLowerCase())
+    c.certificate_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.verification_code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -121,7 +121,7 @@ export const CertificatesTab: React.FC<CertificatesTabProps> = ({ schoolId, onOp
                       <QrCode className="w-4 h-4 text-amber-500 shrink-0" />
                       <span className="font-mono text-[11px] text-gray-600 dark:text-gray-300 font-bold">{cert.verification_code}</span>
                       <button
-                        onClick={() => handleCopyLink(cert.verification_code)}
+                        onClick={() => cert.verification_code && handleCopyLink(cert.verification_code)}
                         className="text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors"
                         title="Copier le lien d'authenticité public"
                       >

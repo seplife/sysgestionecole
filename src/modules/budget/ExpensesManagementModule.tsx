@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Filter, Eye, CheckCircle2, Check, XCircle, FileText, Trash2, Edit2 } from 'lucide-react';
 import { formatFCFA } from '../../utils/payrollCalculations';
 import { Expense, CostCenter, ExpenseStatus } from '../../types';
-import { PaymentMethod } from '../../types/hr';
+import { HrPaymentMethod as PaymentMethod } from '../../types/hr';
 import { budgetService } from '../../services/budgetService';
 
 const SCHOOL_ID = '00000000-0000-4000-8000-000000000001';

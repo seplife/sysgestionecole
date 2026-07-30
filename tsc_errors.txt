@@ -1,0 +1,142 @@
+﻿src/components/auth/AccessStatusScreens.tsx(3,29): error TS2305: Module '"../../types/database"' has no exported member 'SaasPaymentRecord'.
+src/context/SubscriptionContext.tsx(2,44): error TS2305: Module '"../types/database"' has no exported member 'SaasPaymentRecord'.
+src/context/TenantContext.tsx(151,29): error TS2304: Cannot find name 'savedId'.
+src/context/TenantContext.tsx(151,63): error TS2304: Cannot find name 'savedId'.
+src/context/TenantContext.tsx(284,9): error TS2322: Type '(school: School) => Promise<School>' is not assignable to type '(school: School) => Promise<void>'.
+  Type 'Promise<School>' is not assignable to type 'Promise<void>'.
+    Type 'School' is not assignable to type 'void'.
+src/modules/attendance/AttendanceModule.tsx(41,13): error TS2322: Type '(AttendanceRecord | { id: string; school_id: string; class_id: string; class_name: string; student_id: string; student_name: string; date: string; status: "Present"; minutes_late: number; is_justified: boolean; })[]' is not assignable to type 'AttendanceRecord[]'.
+  Type 'AttendanceRecord | { id: string; school_id: string; class_id: string; class_name: string; student_id: string; student_name: string; date: string; status: "Present"; minutes_late: number; is_justified: boolean; }' is not assignable to type 'AttendanceRecord'.
+    Type '{ id: string; school_id: string; class_id: string; class_name: string; student_id: string; student_name: string; date: string; status: "Present"; minutes_late: number; is_justified: boolean; }' is not assignable to type 'AttendanceRecord'.
+      Types of property 'status' are incompatible.
+        Type '"Present"' is not assignable to type 'AttendanceStatus'. Did you mean '"present"'?
+src/modules/attendance/AttendanceModule.tsx(65,16): error TS2345: Argument of type '(AttendanceRecord | { status: "Present" | "Absent" | "Retard" | "Excuse"; id: string; school_id: string; student_id: string; class_id: string; academic_term_id?: string | null | undefined; ... 5 more ...; class_name?: string | undefined; })[]' is not assignable to parameter of type 'SetStateAction<AttendanceRecord[]>'.
+  Type '(AttendanceRecord | { status: "Present" | "Absent" | "Retard" | "Excuse"; id: string; school_id: string; student_id: string; class_id: string; academic_term_id?: string | null | undefined; ... 5 more ...; class_name?: string | undefined; })[]' is not assignable to type 'AttendanceRecord[]'.
+    Type 'AttendanceRecord | { status: "Present" | "Absent" | "Retard" | "Excuse"; id: string; school_id: string; student_id: string; class_id: string; academic_term_id?: string | null | undefined; ... 5 more ...; class_name?: string | undefined; }' is not assignable to type 'AttendanceRecord'.
+      Type '{ status: "Present" | "Absent" | "Retard" | "Excuse"; id: string; school_id: string; student_id: string; class_id: string; academic_term_id?: string | null; date: string; reason?: string | null; created_by?: string | null; created_at?: string; student_name?: string; class_name?: string; }' is not assignable to type 'AttendanceRecord'.
+        Types of property 'status' are incompatible.
+          Type '"Present" | "Absent" | "Retard" | "Excuse"' is not assignable to type 'AttendanceStatus'.
+            Type '"Present"' is not assignable to type 'AttendanceStatus'. Did you mean '"present"'?
+src/modules/attendance/AttendanceModule.tsx(66,41): error TS2345: Argument of type '(AttendanceRecord | { status: "Present" | "Absent" | "Retard" | "Excuse"; id: string; school_id: string; student_id: string; class_id: string; academic_term_id?: string | null | undefined; ... 5 more ...; class_name?: string | undefined; })[]' is not assignable to parameter of type 'AttendanceRecord[]'.
+  Type 'AttendanceRecord | { status: "Present" | "Absent" | "Retard" | "Excuse"; id: string; school_id: string; student_id: string; class_id: string; academic_term_id?: string | null | undefined; ... 5 more ...; class_name?: string | undefined; }' is not assignable to type 'AttendanceRecord'.
+    Type '{ status: "Present" | "Absent" | "Retard" | "Excuse"; id: string; school_id: string; student_id: string; class_id: string; academic_term_id?: string | null; date: string; reason?: string | null; created_by?: string | null; created_at?: string; student_name?: string; class_name?: string; }' is not assignable to type 'AttendanceRecord'.
+      Types of property 'status' are incompatible.
+        Type '"Present" | "Absent" | "Retard" | "Excuse"' is not assignable to type 'AttendanceStatus'.
+          Type '"Present"' is not assignable to type 'AttendanceStatus'. Did you mean '"present"'?
+src/modules/attendance/AttendanceModule.tsx(71,16): error TS2345: Argument of type '(AttendanceRecord | { minutes_late: number; status: AttendanceStatus | "Retard"; id: string; school_id: string; student_id: string; class_id: string; ... 6 more ...; class_name?: string | undefined; })[]' is not assignable to parameter of type 'SetStateAction<AttendanceRecord[]>'.
+  Type '(AttendanceRecord | { minutes_late: number; status: AttendanceStatus | "Retard"; id: string; school_id: string; student_id: string; class_id: string; ... 6 more ...; class_name?: string | undefined; })[]' is not assignable to type 'AttendanceRecord[]'.
+    Type 'AttendanceRecord | { minutes_late: number; status: AttendanceStatus | "Retard"; id: string; school_id: string; student_id: string; class_id: string; ... 6 more ...; class_name?: string | undefined; }' is not assignable to type 'AttendanceRecord'.
+      Type '{ minutes_late: number; status: AttendanceStatus | "Retard"; id: string; school_id: string; student_id: string; class_id: string; academic_term_id?: string | null; ... 5 more ...; class_name?: string; }' is not assignable to type 'AttendanceRecord'.
+        Types of property 'status' are incompatible.
+          Type 'AttendanceStatus | "Retard"' is not assignable to type 'AttendanceStatus'.
+            Type '"Retard"' is not assignable to type 'AttendanceStatus'.
+src/modules/attendance/AttendanceModule.tsx(72,41): error TS2345: Argument of type '(AttendanceRecord | { minutes_late: number; status: AttendanceStatus | "Retard"; id: string; school_id: string; student_id: string; class_id: string; ... 6 more ...; class_name?: string | undefined; })[]' is not assignable to parameter of type 'AttendanceRecord[]'.
+  Type 'AttendanceRecord | { minutes_late: number; status: AttendanceStatus | "Retard"; id: string; school_id: string; student_id: string; class_id: string; ... 6 more ...; class_name?: string | undefined; }' is not assignable to type 'AttendanceRecord'.
+    Type '{ minutes_late: number; status: AttendanceStatus | "Retard"; id: string; school_id: string; student_id: string; class_id: string; academic_term_id?: string | null; ... 5 more ...; class_name?: string; }' is not assignable to type 'AttendanceRecord'.
+      Types of property 'status' are incompatible.
+        Type 'AttendanceStatus | "Retard"' is not assignable to type 'AttendanceStatus'.
+          Type '"Retard"' is not assignable to type 'AttendanceStatus'.
+src/modules/attendance/AttendanceModule.tsx(174,23): error TS2367: This comparison appears to be unintentional because the types 'AttendanceStatus' and '"Present"' have no overlap.
+src/modules/attendance/AttendanceModule.tsx(175,23): error TS2367: This comparison appears to be unintentional because the types 'AttendanceStatus' and '"Absent"' have no overlap.
+src/modules/attendance/AttendanceModule.tsx(176,23): error TS2367: This comparison appears to be unintentional because the types 'AttendanceStatus' and '"Retard"' have no overlap.
+src/modules/attendance/AttendanceModule.tsx(186,34): error TS2339: Property 'minutes_late' does not exist on type 'AttendanceRecord'.
+src/modules/attendance/AttendanceModule.tsx(196,25): error TS2367: This comparison appears to be unintentional because the types 'AttendanceStatus' and '"Present"' have no overlap.
+src/modules/attendance/AttendanceModule.tsx(204,25): error TS2367: This comparison appears to be unintentional because the types 'AttendanceStatus' and '"Absent"' have no overlap.
+src/modules/attendance/AttendanceModule.tsx(212,25): error TS2367: This comparison appears to be unintentional because the types 'AttendanceStatus' and '"Retard"' have no overlap.
+src/modules/budget/ExpensesManagementModule.tsx(5,10): error TS2724: '"../../types/hr"' has no exported member named 'PaymentMethod'. Did you mean 'HrPaymentMethod'?
+src/modules/budget/RevenuesManagementModule.tsx(5,10): error TS2724: '"../../types/hr"' has no exported member named 'PaymentMethod'. Did you mean 'HrPaymentMethod'?
+src/modules/exams/tabs/CertificatesTab.tsx(45,5): error TS18048: 'c.certificate_number' is possibly 'undefined'.
+src/modules/exams/tabs/CertificatesTab.tsx(46,5): error TS18048: 'c.verification_code' is possibly 'undefined'.
+src/modules/exams/tabs/CertificatesTab.tsx(124,55): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/modules/exams/tabs/GradesEntryTab.tsx(151,11): error TS2322: Type 'number | null' is not assignable to type 'number | undefined'.
+  Type 'null' is not assignable to type 'number | undefined'.
+src/modules/exams/tabs/HonorRollTab.tsx(23,102): error TS2353: Object literal may only specify known properties, and 'registration_number' does not exist in type 'HonorRollEntry'.
+src/modules/exams/tabs/HonorRollTab.tsx(24,104): error TS2353: Object literal may only specify known properties, and 'registration_number' does not exist in type 'HonorRollEntry'.
+src/modules/exams/tabs/HonorRollTab.tsx(25,98): error TS2353: Object literal may only specify known properties, and 'registration_number' does not exist in type 'HonorRollEntry'.
+src/modules/exams/tabs/HonorRollTab.tsx(26,98): error TS2353: Object literal may only specify known properties, and 'registration_number' does not exist in type 'HonorRollEntry'.
+src/modules/exams/tabs/HonorRollTab.tsx(27,101): error TS2353: Object literal may only specify known properties, and 'registration_number' does not exist in type 'HonorRollEntry'.
+src/modules/exams/tabs/HonorRollTab.tsx(49,23): error TS2339: Property 'distinction_level' does not exist on type 'HonorRollEntry'.
+src/modules/exams/tabs/HonorRollTab.tsx(122,79): error TS2339: Property 'class_name' does not exist on type 'HonorRollEntry'.
+src/modules/exams/tabs/HonorRollTab.tsx(122,142): error TS2339: Property 'registration_number' does not exist on type 'HonorRollEntry'.
+src/modules/exams/tabs/HonorRollTab.tsx(125,115): error TS2339: Property 'average' does not exist on type 'HonorRollEntry'.
+src/modules/exams/tabs/RankingsTab.tsx(70,44): error TS2339: Property 'result_status' does not exist on type 'ExamResult'.
+src/modules/exams/tabs/RankingsTab.tsx(73,53): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/modules/exams/tabs/RankingsTab.tsx(74,53): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/modules/exams/tabs/RankingsTab.tsx(75,48): error TS2532: Object is possibly 'undefined'.
+src/modules/exams/tabs/RankingsTab.tsx(75,74): error TS18048: 'a' is possibly 'undefined'.
+src/modules/exams/tabs/RankingsTab.tsx(75,78): error TS18048: 'b' is possibly 'undefined'.
+src/modules/exams/tabs/RankingsTab.tsx(316,72): error TS2345: Argument of type 'number | null | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/modules/exams/tabs/RankingsTab.tsx(333,26): error TS2339: Property 'total_points' does not exist on type 'ExamResult'.
+src/modules/exams/tabs/RankingsTab.tsx(338,24): error TS18048: 'res.average' is possibly 'undefined'.
+src/modules/exams/tabs/RankingsTab.tsx(343,38): error TS2345: Argument of type 'string | null | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/modules/exams/tabs/RankingsTab.tsx(347,26): error TS2339: Property 'result_status' does not exist on type 'ExamResult'.
+src/modules/extra/AuxiliaryModules.tsx(6,10): error TS2305: Module '"../../types/database"' has no exported member 'BookItem'.
+src/modules/extra/AuxiliaryModules.tsx(6,20): error TS2305: Module '"../../types/database"' has no exported member 'BookLoan'.
+src/modules/hr/EmployeesListModule.tsx(331,102): error TS2322: Type 'PaymentMethod' is not assignable to type 'HrPaymentMethod | undefined'.
+  Type '"orange_money"' is not assignable to type 'HrPaymentMethod | undefined'.
+src/modules/hr/StaffAttendanceModule.tsx(23,13): error TS2322: Type 'HrAttendanceStatus' is not assignable to type 'AttendanceStatus'.
+  Type '"retard"' is not assignable to type 'AttendanceStatus'.
+src/modules/hr/StaffAttendanceModule.tsx(50,11): error TS2322: Type '{ id: string; school_id: string; employee_id: string; employee_name: string; date: string; check_in: string; status: AttendanceStatus; late_minutes: number; justification_reason: string; created_at: string; }[]' is not assignable to type 'EmployeeAttendance[]'.
+  Type '{ id: string; school_id: string; employee_id: string; employee_name: string; date: string; check_in: string; status: AttendanceStatus; late_minutes: number; justification_reason: string; created_at: string; }' is not assignable to type 'EmployeeAttendance'.
+    Types of property 'status' are incompatible.
+      Type 'AttendanceStatus' is not assignable to type 'HrAttendanceStatus'.
+        Type '"late"' is not assignable to type 'HrAttendanceStatus'.
+src/modules/hr/StaffAttendanceModule.tsx(138,33): error TS2367: This comparison appears to be unintentional because the types '"absent" | "late" | "excused"' and '"retard"' have no overlap.
+src/modules/hr/StaffAttendanceModule.tsx(160,22): error TS2367: This comparison appears to be unintentional because the types 'AttendanceStatus' and '"retard"' have no overlap.
+src/modules/parents/ParentManagementModule.tsx(428,21): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/modules/parents/ParentManagementModule.tsx(437,21): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/modules/payroll/PayrollDashboardModule.tsx(20,62): error TS2345: Argument of type '{ id: string; name: string; slug: string; address: string; city: string; country: string; phone: string; email: string; registration_number: string; motto: string; school_type: "Prive"; status: "active"; }' is not assignable to parameter of type 'School | (() => School)'.
+  Property 'created_at' is missing in type '{ id: string; name: string; slug: string; address: string; city: string; country: string; phone: string; email: string; registration_number: string; motto: string; school_type: "Prive"; status: "active"; }' but required in type 'School'.
+src/modules/payroll/PayrollPreparationModule.tsx(15,62): error TS2345: Argument of type '{ id: string; name: string; address: string; phone: string; email: string; registration_number: string; school_type: "Prive"; }' is not assignable to parameter of type 'School | (() => School)'.
+  Type '{ id: string; name: string; address: string; phone: string; email: string; registration_number: string; school_type: "Prive"; }' is missing the following properties from type 'School': slug, status, created_at
+src/modules/payroll/SalaryPaymentsModule.tsx(26,62): error TS2345: Argument of type '{ id: string; name: string; address: string; phone: string; email: string; registration_number: string; school_type: "Prive"; }' is not assignable to parameter of type 'School | (() => School)'.
+  Type '{ id: string; name: string; address: string; phone: string; email: string; registration_number: string; school_type: "Prive"; }' is missing the following properties from type 'School': slug, status, created_at
+src/modules/payroll/SalaryPaymentsModule.tsx(46,7): error TS2322: Type 'HrPaymentMethod' is not assignable to type 'PaymentMethod'.
+  Type '"mobile_money"' is not assignable to type 'PaymentMethod'.
+src/modules/payroll/SalaryPaymentsModule.tsx(70,7): error TS2322: Type 'PaymentMethod' is not assignable to type 'HrPaymentMethod | undefined'.
+  Type '"orange_money"' is not assignable to type 'HrPaymentMethod | undefined'.
+src/modules/payroll/SalaryPaymentsModule.tsx(207,16): error TS2367: This comparison appears to be unintentional because the types 'PaymentMethod' and '"virement"' have no overlap.
+src/modules/payroll/SalaryPaymentsModule.tsx(219,16): error TS2367: This comparison appears to be unintentional because the types 'PaymentMethod' and '"mobile_money"' have no overlap.
+src/modules/school/SchoolManagementModule.tsx(119,19): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/modules/school/SchoolManagementModule.tsx(143,17): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/modules/school/SchoolManagementModule.tsx(159,19): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/modules/school/SchoolManagementModule.tsx(183,19): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/modules/school/SchoolManagementModule.tsx(193,19): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/modules/school/SchoolManagementModule.tsx(205,19): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/modules/school/SchoolManagementModule.tsx(215,19): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/modules/students/StudentListModule.tsx(360,21): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/modules/students/StudentListModule.tsx(370,21): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/modules/teachers/TeachersModule.tsx(159,40): error TS2345: Argument of type 'UserRole | undefined' is not assignable to parameter of type 'UserRole'.
+  Type 'undefined' is not assignable to type 'UserRole'.
+src/modules/teachers/TeachersModule.tsx(397,45): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/services/examsService.ts(330,64): error TS18049: 'exam.level_id' is possibly 'null' or 'undefined'.
+src/services/examsService.ts(349,11): error TS2353: Object literal may only specify known properties, and 'candidate_number' does not exist in type 'ExamCandidate'.
+src/services/examsService.ts(421,9): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/services/examsService.ts(505,9): error TS2353: Object literal may only specify known properties, and 'total_points' does not exist in type 'ExamResult'.
+src/services/examsService.ts(525,28): error TS18048: 'b.average' is possibly 'undefined'.
+src/services/examsService.ts(525,40): error TS18048: 'a.average' is possibly 'undefined'.
+src/services/examsService.ts(528,24): error TS18048: 'item.average' is possibly 'undefined'.
+src/services/examsService.ts(528,39): error TS2532: Object is possibly 'undefined'.
+src/services/examsService.ts(536,36): error TS18048: 'b.average' is possibly 'undefined'.
+src/services/examsService.ts(536,48): error TS18048: 'a.average' is possibly 'undefined'.
+src/services/examsService.ts(539,22): error TS18048: 'item.average' is possibly 'undefined'.
+src/services/examsService.ts(539,37): error TS2532: Object is possibly 'undefined'.
+src/services/examsService.ts(572,9): error TS2353: Object literal may only specify known properties, and 'title' does not exist in type 'HonorRoll'.

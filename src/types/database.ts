@@ -399,6 +399,7 @@ export interface ExamCandidate {
   student_id: string;
   class_id?: string;
   registration_number?: string;
+  candidate_number?: string;
   student_name?: string;
   class_name?: string;
 }
@@ -424,11 +425,14 @@ export interface ExamResult {
   registration_number?: string;
   class_name?: string;
   total_score?: number;
+  total_points?: number;
   average_score?: number;
   average?: number;
   rank?: number | null;
   rank_level?: number | null;
   mention?: string | null;
+  result_status?: 'ADMIS' | 'REFUSÉ' | 'ABSENT' | string;
+  total_coefficients?: number;
   decision?: 'admis' | 'ajourne' | 'rattrapage' | string;
 }
 
@@ -443,6 +447,7 @@ export interface HonorRollConfig {
 export interface HonorRoll {
   id: string;
   school_id: string;
+  title?: string;
   academic_year_id?: string;
   academic_term_id?: string;
   period_type?: string;
@@ -455,9 +460,13 @@ export interface HonorRollEntry {
   honor_roll_id: string;
   student_id: string;
   student_name?: string;
+  registration_number?: string;
+  class_name?: string;
   average_score?: number;
+  average?: number;
   rank?: number;
   distinction?: string;
+  distinction_level?: string;
 }
 
 export interface Award {
@@ -499,6 +508,31 @@ export interface Certificate {
   rank?: number;
   mention?: string;
   verification_code?: string;
+}
+
+export interface BookItem {
+  id: string;
+  isbn: string;
+  title: string;
+  author: string;
+  category: string;
+  level_target: string;
+  condition: string;
+  totalQuantity: number;
+  availableQuantity: number;
+}
+
+export interface BookLoan {
+  id: string;
+  book_id: string;
+  book_title: string;
+  student_name: string;
+  student_matricule: string;
+  class_name: string;
+  loan_date: string;
+  due_date: string;
+  returned_date?: string;
+  status: string;
 }
 
 // ------------------------------------------------------------

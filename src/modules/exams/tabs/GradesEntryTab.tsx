@@ -148,7 +148,7 @@ export const GradesEntryTab: React.FC<GradesEntryTabProps> = ({
         gradesToSave.push({
           student_id,
           subject_id,
-          score: val.score,
+          score: val.score ?? 0,
           is_absent: val.is_absent
         });
       });

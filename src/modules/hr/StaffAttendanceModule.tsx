@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarCheck, Clock, CheckCircle2, XCircle, AlertCircle, Save } from 'lucide-react';
 import { hrService } from '../../services/hrService';
-import { Employee, EmployeeAttendance, AttendanceStatus } from '../../types';
+import { Employee, EmployeeAttendance, HrAttendanceStatus } from '../../types';
 
 export const StaffAttendanceModule: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().substring(0, 10));
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [attendanceMap, setAttendanceMap] = useState<Record<string, { status: AttendanceStatus; checkIn: string; lateMinutes: number; reason: string }>>({});
+  const [attendanceMap, setAttendanceMap] = useState<Record<string, { status: HrAttendanceStatus; checkIn: string; lateMinutes: number; reason: string }>>({});
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
@@ -15,7 +15,7 @@ export const StaffAttendanceModule: React.FC = () => {
       setEmployees(emps);
       const records = await hrService.fetchEmployeeAttendance(selectedDate);
       
-      const map: Record<string, { status: AttendanceStatus; checkIn: string; lateMinutes: number; reason: string }> = {};
+      const map: Record<string, { status: HrAttendanceStatus; checkIn: string; lateMinutes: number; reason: string }> = {};
       emps.forEach(emp => {
         const found = records.find(r => r.employee_id === emp.id);
         if (found) {
@@ -39,7 +39,7 @@ export const StaffAttendanceModule: React.FC = () => {
     loadData();
   }, [selectedDate]);
 
-  const handleStatusChange = (empId: string, status: AttendanceStatus) => {
+  const handleStatusChange = (empId: string, status: HrAttendanceStatus) => {
     setAttendanceMap(prev => ({
       ...prev,
       [empId]: { ...prev[empId], status }
@@ -127,7 +127,7 @@ export const StaffAttendanceModule: React.FC = () => {
                   <td className="py-3 px-4 text-slate-500">{emp.position_name || emp.employee_type}</td>
                   <td className="py-3 px-4">
                     <div className="flex gap-1">
-                      {(['present', 'retard', 'absent', 'conge'] as AttendanceStatus[]).map(st => (
+                      {(['present', 'retard', 'absent', 'conge'] as HrAttendanceStatus[]).map(st => (
                         <button
                           key={st}
                           type="button"

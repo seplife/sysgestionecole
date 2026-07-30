@@ -321,13 +321,14 @@ export const examsService = {
     dbCandidates.forEach(c => candidateMap.set(c.student_id, c));
 
     // Filter registered students matching exam level if set
+    const levelId = exam?.level_id;
     let targetStudents = schoolStudents;
-    if (exam && exam.level_id) {
-      const levelNorm = exam.level_id.toLowerCase().replace('ème', '').replace('ter', 'tle').trim();
+    if (exam && levelId) {
+      const levelNorm = levelId.toLowerCase().replace('ème', '').replace('ter', 'tle').trim();
       const filtered = schoolStudents.filter(s => {
         if (!s.current_class_name) return true;
         const clsNorm = s.current_class_name.toLowerCase();
-        return clsNorm.includes(levelNorm) || clsNorm.includes(exam.level_id.toLowerCase());
+        return clsNorm.includes(levelNorm) || clsNorm.includes(levelId.toLowerCase());
       });
       if (filtered.length > 0) {
         targetStudents = filtered;
@@ -418,7 +419,7 @@ export const examsService = {
         exam_id: examId,
         student_id: g.student_id!,
         subject_id: g.subject_id!,
-        score: g.score,
+        score: g.score ?? 0,
         is_absent: g.is_absent || false,
         updated_at: new Date().toISOString()
       });
@@ -522,10 +523,10 @@ export const examsService = {
     });
 
     Object.values(classGroups).forEach(group => {
-      group.sort((a, b) => b.average - a.average);
+      group.sort((a, b) => (b.average ?? 0) - (a.average ?? 0));
       let rank = 1;
       group.forEach((item, idx) => {
-        if (idx > 0 && item.average < group[idx - 1].average) {
+        if (idx > 0 && (item.average ?? 0) < (group[idx - 1].average ?? 0)) {
           rank = idx + 1;
         }
         item.rank = rank;
@@ -533,10 +534,10 @@ export const examsService = {
     });
 
     // DENSE_RANK() OVER (ORDER BY average DESC) - Rank Level
-    computedResults.sort((a, b) => b.average - a.average);
+    computedResults.sort((a, b) => (b.average ?? 0) - (a.average ?? 0));
     let rankLevel = 1;
     computedResults.forEach((item, idx) => {
-      if (idx > 0 && item.average < computedResults[idx - 1].average) {
+      if (idx > 0 && (item.average ?? 0) < (computedResults[idx - 1].average ?? 0)) {
         rankLevel = idx + 1;
       }
       item.rank_level = rankLevel;

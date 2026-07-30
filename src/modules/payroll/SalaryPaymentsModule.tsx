@@ -3,7 +3,7 @@ import { CreditCard, Smartphone, CheckCircle2, DollarSign, Search, Plus, Filter,
 import { payrollService } from '../../services/payrollService';
 import { pdfExportService } from '../../services/pdfExportService';
 import { supabaseService } from '../../services/supabaseService';
-import { Payslip, SalaryPayment, School, PaymentMethod } from '../../types';
+import { Payslip, SalaryPayment, School, HrPaymentMethod } from '../../types';
 import { formatFCFA } from '../../utils/payrollCalculations';
 
 export const SalaryPaymentsModule: React.FC = () => {
@@ -14,7 +14,7 @@ export const SalaryPaymentsModule: React.FC = () => {
 
   const [paymentForm, setPaymentForm] = useState({
     amount: 0,
-    payment_method: 'virement' as PaymentMethod,
+    payment_method: 'virement' as HrPaymentMethod,
     bank_name: 'NSIA Banque CI',
     mobile_money_provider: 'Wave',
     mobile_money_phone: '',
@@ -30,7 +30,10 @@ export const SalaryPaymentsModule: React.FC = () => {
     phone: '+225 27 22 49 88 00',
     email: 'contact@saintviateur-palmeraie.ci',
     registration_number: '000730/MENA',
-    school_type: 'Prive'
+    school_type: 'Prive',
+    slug: 'saint-viateur-palmeraie',
+    status: 'active',
+    created_at: new Date().toISOString()
   });
 
   useEffect(() => {
@@ -194,7 +197,7 @@ export const SalaryPaymentsModule: React.FC = () => {
                 <label className="block font-bold mb-1">Moyen de Paiement *</label>
                 <select
                   value={paymentForm.payment_method}
-                  onChange={e => setPaymentForm({...paymentForm, payment_method: e.target.value as PaymentMethod})}
+                  onChange={e => setPaymentForm({...paymentForm, payment_method: e.target.value as HrPaymentMethod})}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl font-bold"
                 >
                   <option value="virement">Virement Bancaire (NSIA / Ecobank / SGBCI)</option>

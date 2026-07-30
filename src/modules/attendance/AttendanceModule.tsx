@@ -50,9 +50,7 @@ export const AttendanceModule: React.FC = () => {
           student_id: st.id,
           student_name: `${st.last_name} ${st.first_name}`,
           date: date,
-          status: 'Present',
-          minutes_late: 0,
-          is_justified: false
+          status: 'present'
         };
       });
 
@@ -60,14 +58,14 @@ export const AttendanceModule: React.FC = () => {
     });
   }, [selectedClass, date, students]);
 
-  const toggleStatus = (id: string, newStatus: 'Present' | 'Absent' | 'Retard' | 'Excuse') => {
+  const toggleStatus = (id: string, newStatus: 'present' | 'absent' | 'late' | 'excused') => {
     const updated = records.map(r => r.id === id ? { ...r, status: newStatus } : r);
     setRecords(updated);
     supabaseService.saveAttendanceBatch(updated);
   };
 
   const handleMinutesLateChange = (id: string, mins: number) => {
-    const updated = records.map(r => r.id === id ? { ...r, minutes_late: mins, status: mins > 0 ? ('Retard' as const) : r.status } : r);
+    const updated = records.map(r => r.id === id ? { ...r, status: mins > 0 ? ('late' as const) : r.status, reason: mins > 0 ? `${mins} min retard` : r.reason } : r);
     setRecords(updated);
     supabaseService.saveAttendanceBatch(updated);
   };
@@ -171,11 +169,11 @@ export const AttendanceModule: React.FC = () => {
                   </td>
                   <td className="py-3 px-4">
                     <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
-                      rec.status === 'Present' ? 'bg-emerald-50 text-emerald-700' :
-                      rec.status === 'Absent' ? 'bg-rose-50 text-rose-700 font-extrabold animate-pulse' :
-                      rec.status === 'Retard' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-700'
+                      rec.status === 'present' ? 'bg-emerald-50 text-emerald-700' :
+                      rec.status === 'absent' ? 'bg-rose-50 text-rose-700 font-extrabold animate-pulse' :
+                      rec.status === 'late' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-700'
                     }`}>
-                      {rec.status}
+                      {rec.status === 'present' ? 'Présent' : rec.status === 'absent' ? 'Absent' : rec.status === 'late' ? 'Retard' : 'Excusé'}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-xs font-mono">
@@ -183,7 +181,7 @@ export const AttendanceModule: React.FC = () => {
                       type="number"
                       min="0"
                       max="120"
-                      value={rec.minutes_late || 0}
+                      value={rec.reason?.includes('min retard') ? parseInt(rec.reason) || 0 : 0}
                       onChange={(e) => handleMinutesLateChange(rec.id, parseInt(e.target.value) || 0)}
                       className="w-16 px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md font-bold text-slate-900 dark:text-white text-center outline-none"
                     />
@@ -191,25 +189,25 @@ export const AttendanceModule: React.FC = () => {
                   </td>
                   <td className="py-3 px-4 text-right space-x-1">
                     <button
-                      onClick={() => toggleStatus(rec.id, 'Present')}
+                      onClick={() => toggleStatus(rec.id, 'present')}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                        rec.status === 'Present' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                        rec.status === 'present' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                       }`}
                     >
                       Présent
                     </button>
                     <button
-                      onClick={() => toggleStatus(rec.id, 'Absent')}
+                      onClick={() => toggleStatus(rec.id, 'absent')}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                        rec.status === 'Absent' ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                        rec.status === 'absent' ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                       }`}
                     >
                       Absent
                     </button>
                     <button
-                      onClick={() => toggleStatus(rec.id, 'Retard')}
+                      onClick={() => toggleStatus(rec.id, 'late')}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                        rec.status === 'Retard' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                        rec.status === 'late' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                       }`}
                     >
                       Retard

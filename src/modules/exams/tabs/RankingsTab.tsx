@@ -69,7 +69,7 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
   const totalCandidates = results.length;
   const totalAdmis = results.filter(r => r.result_status === 'ADMIS').length;
   const successRate = totalCandidates > 0 ? ((totalAdmis / totalCandidates) * 100).toFixed(1) : '0';
-  const averages = results.map(r => r.average);
+  const averages = results.map(r => r.average ?? 0);
   const maxAverage = averages.length > 0 ? Math.max(...averages).toFixed(2) : '0.00';
   const minAverage = averages.length > 0 ? Math.min(...averages).toFixed(2) : '0.00';
   const globalAverage = averages.length > 0 ? (averages.reduce((a, b) => a + b, 0) / averages.length).toFixed(2) : '0.00';
@@ -313,11 +313,11 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
                 <tr key={res.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
                   
                   <td className="py-3 px-4 text-center">
-                    <div className="flex justify-center">{getRankMedal(res.rank)}</div>
+                    <div className="flex justify-center">{getRankMedal(res.rank ?? 1)}</div>
                   </td>
 
                   <td className="py-3 px-4 text-center font-bold text-gray-400">
-                    N° {res.rank_level}
+                    N° {res.rank_level || 1}
                   </td>
 
                   <td className="py-3 px-4">
@@ -330,17 +330,17 @@ export const RankingsTab: React.FC<RankingsTabProps> = ({
                   </td>
 
                   <td className="py-3 px-3 text-right font-mono text-gray-700 dark:text-gray-300">
-                    {res.total_points} pts
+                    {res.total_points ?? 0} pts
                   </td>
 
                   <td className="py-3 px-4 text-center">
                     <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
-                      {res.average.toFixed(2)}
+                      {(res.average ?? 0).toFixed(2)}
                     </span>
                   </td>
 
                   <td className="py-3 px-4 text-center">
-                    {getMentionBadge(res.mention)}
+                    {getMentionBadge(res.mention || 'Ajourné')}
                   </td>
 
                   <td className="py-3 px-4 text-center">

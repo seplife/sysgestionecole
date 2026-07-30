@@ -88,7 +88,8 @@ export const TeachersModule: React.FC = () => {
     }
   };
 
-  const getRoleBadgeLabel = (role: UserRole) => {
+  const getRoleBadgeLabel = (role?: UserRole) => {
+    if (!role) return 'Membre du Personnel';
     switch (role) {
       case 'enseignant': return 'Professeur Titulaire';
       case 'prof_principal': return 'Professeur Principal';
@@ -394,7 +395,7 @@ export const TeachersModule: React.FC = () => {
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Téléphone</label>
-                <input type="text" required value={editingStaff.phone} onChange={(e) => setEditingStaff({...editingStaff, phone: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl font-mono" />
+                <input type="text" required value={editingStaff.phone || ''} onChange={(e) => setEditingStaff({...editingStaff, phone: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl font-mono" />
               </div>
 
               <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">

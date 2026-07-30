@@ -19,7 +19,10 @@ export const PayrollPreparationModule: React.FC = () => {
     phone: '+225 27 22 49 88 00',
     email: 'contact@saintviateur-palmeraie.ci',
     registration_number: '000730/MENA',
-    school_type: 'Prive'
+    school_type: 'Prive',
+    slug: 'saint-viateur-palmeraie',
+    status: 'active',
+    created_at: new Date().toISOString()
   });
 
   useEffect(() => {

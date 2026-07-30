@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Search, Filter, Edit2, Trash2, ShieldCheck, Eye, Phone, Mail, CreditCard, Building2, UserCheck, X } from 'lucide-react';
 import { hrService } from '../../services/hrService';
-import { Employee, ContractType, EmployeeType, PaymentMethod } from '../../types';
+import { Employee, ContractType, EmployeeType, HrPaymentMethod } from '../../types';
 import { formatFCFA } from '../../utils/payrollCalculations';
 
 interface EmployeesListModuleProps {
@@ -328,7 +328,7 @@ export const EmployeesListModule: React.FC<EmployeesListModuleProps> = ({ onSele
                   </div>
                   <div>
                     <label className="block font-bold mb-1">Mode de Paiement</label>
-                    <select value={formData.payment_method} onChange={e => setFormData({...formData, payment_method: e.target.value as PaymentMethod})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl font-bold">
+                    <select value={formData.payment_method} onChange={e => setFormData({...formData, payment_method: e.target.value as HrPaymentMethod})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl font-bold">
                       <option value="virement">Virement Bancaire</option>
                       <option value="mobile_money">Mobile Money (Wave / Orange / MTN)</option>
                       <option value="cheque">Chèque</option>

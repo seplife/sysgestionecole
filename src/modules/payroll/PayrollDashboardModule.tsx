@@ -29,7 +29,8 @@ export const PayrollDashboardModule: React.FC<PayrollDashboardProps> = ({ onNavi
     registration_number: '000730/MENA',
     motto: 'Foi, Discipline, Excellence',
     school_type: 'Prive',
-    status: 'active'
+    status: 'active',
+    created_at: new Date().toISOString()
   });
 
   useEffect(() => {
