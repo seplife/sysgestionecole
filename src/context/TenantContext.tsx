@@ -100,7 +100,7 @@ interface TenantContextType {
   setCurrentSchool: (school: School) => void;
   updateCurrentSchool: (updated: Partial<School>) => Promise<void>;
   updateSchool: (id: string, updated: Partial<School>) => Promise<void>;
-  addNewSchool: (school: School) => Promise<void>;
+  addNewSchool: (school: School) => Promise<School>;
   deleteSchool: (id: string) => Promise<void>;
   reloadSchools: () => Promise<void>;
   academicYear: AcademicYear;
@@ -148,6 +148,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setSchools(data);
 
       if (data.length > 0) {
+        const savedId = getSavedSchoolId();
         const savedSchool = savedId ? data.find(s => s.id === savedId) : null;
 
         const selected =

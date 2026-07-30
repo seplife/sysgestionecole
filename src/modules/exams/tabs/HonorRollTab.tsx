@@ -46,7 +46,7 @@ export const HonorRollTab: React.FC<HonorRollTabProps> = ({ schoolId, onGenerate
   };
 
   const groupedEntries = entries.reduce((acc, entry) => {
-    const key = entry.distinction_level;
+    const key = entry.distinction_level || entry.distinction || 'Distinction';
     if (!acc[key]) acc[key] = [];
     acc[key].push(entry);
     return acc;
@@ -122,7 +122,7 @@ export const HonorRollTab: React.FC<HonorRollTabProps> = ({ schoolId, onGenerate
                     <div className="text-xs text-gray-500 font-medium">{entry.class_name} • <span className="font-mono text-gray-400">{entry.registration_number}</span></div>
                   </div>
                   <div className="text-right">
-                    <div className="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">{entry.average.toFixed(2)}</div>
+                    <div className="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">{(entry.average ?? entry.average_score ?? 0).toFixed(2)}</div>
                     <div className="text-[10px] text-gray-400 font-bold">Rang #{entry.rank}</div>
                   </div>
                 </div>

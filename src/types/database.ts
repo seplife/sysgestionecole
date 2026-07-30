@@ -354,6 +354,20 @@ export interface SaasSubscriptionRecord {
   updated_at?: string;
 }
 
+export interface SaasPaymentRecord {
+  id: string;
+  school_id: string;
+  subscription_id?: string;
+  amount: number;
+  currency: string;
+  payment_method: PaymentMethod;
+  reference?: string;
+  transaction_reference?: string;
+  status: PaymentStatus;
+  paid_at?: string;
+  created_at?: string;
+}
+
 // ------------------------------------------------------------
 // EXAMS & HONOR ROLL INTERFACES
 // ------------------------------------------------------------
@@ -402,6 +416,7 @@ export interface ExamCandidate {
   candidate_number?: string;
   student_name?: string;
   class_name?: string;
+  created_at?: string;
 }
 
 export interface ExamGrade {
@@ -414,6 +429,7 @@ export interface ExamGrade {
   score: number;
   comment?: string | null;
   is_absent?: boolean;
+  updated_at?: string;
 }
 
 export interface ExamResult {
@@ -434,6 +450,7 @@ export interface ExamResult {
   result_status?: 'ADMIS' | 'REFUSÉ' | 'ABSENT' | string;
   total_coefficients?: number;
   decision?: 'admis' | 'ajourne' | 'rattrapage' | string;
+  created_at?: string;
 }
 
 export interface HonorRollConfig {
@@ -452,6 +469,7 @@ export interface HonorRoll {
   academic_term_id?: string;
   period_type?: string;
   class_id?: string;
+  entries_count?: number;
   created_at?: string;
 }
 
@@ -462,6 +480,7 @@ export interface HonorRollEntry {
   student_name?: string;
   registration_number?: string;
   class_name?: string;
+  class_id?: string;
   average_score?: number;
   average?: number;
   rank?: number;
@@ -532,6 +551,7 @@ export interface BookLoan {
   loan_date: string;
   due_date: string;
   returned_date?: string;
+  return_date?: string;
   status: string;
 }
 
