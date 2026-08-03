@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { School, Organization, AcademicYear } from '../types/database';
 import { schoolService } from '../services/supabase';
+import { supabaseService } from '../services/supabaseService';
 import { useAuth } from './AuthContext';
 
 // ─────────────────────────────────────────────────────────────
@@ -206,28 +207,62 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // ── Mettre à jour l'école courante ───────────────────────
   const updateCurrentSchool = async (updated: Partial<School>) => {
     if (!currentSchool.id) return;
+    
+    // 1. Mise à jour optimiste du state React immédiat pour le Navbar et le reste de l'UI
+    const newSchool = { ...currentSchool, ...updated };
+    setCurrentSchoolState(newSchool);
+    setSchools(prev => prev.map(s => s.id === newSchool.id ? newSchool : s));
+
+    // 2. Mettre à jour le cache local / localStorage
     try {
-      const result = await schoolService.update(currentSchool.id, updated);
-      const newSchool = { ...currentSchool, ...result };
-      setCurrentSchoolState(newSchool);
-      setSchools(prev => prev.map(s => s.id === newSchool.id ? newSchool : s));
+      await supabaseService.updateSchoolConfig(currentSchool.id, updated);
+    } catch (err) {
+      console.warn('[TenantContext] updateSchoolConfig cache warning:', err);
+    }
+
+    // 3. Tenter la synchronisation Supabase
+    try {
+      const { id: _id, created_at: _ca, ...cleanUpdates } = updated as any;
+      if (Object.keys(cleanUpdates).length > 0) {
+        const result = await schoolService.update(currentSchool.id, cleanUpdates);
+        if (result) {
+          const syncedSchool = { ...newSchool, ...result };
+          setCurrentSchoolState(syncedSchool);
+          setSchools(prev => prev.map(s => s.id === syncedSchool.id ? syncedSchool : s));
+        }
+      }
     } catch (e) {
-      console.error('[TenantContext] updateCurrentSchool error:', e);
-      throw e;
+      console.warn('[TenantContext] Supabase update warning (state local conservé):', e);
     }
   };
 
   // ── Mettre à jour une école par ID ───────────────────────
   const updateSchool = async (id: string, updated: Partial<School>) => {
+    // 1. Mise à jour optimiste
+    setSchools(prev => prev.map(s => s.id === id ? { ...s, ...updated } : s));
+    if (currentSchool.id === id) {
+      setCurrentSchoolState(prev => ({ ...prev, ...updated }));
+    }
+
+    // 2. Cache local
     try {
-      const result = await schoolService.update(id, updated);
-      setSchools(prev => prev.map(s => s.id === id ? { ...s, ...result } : s));
-      if (currentSchool.id === id) {
-        setCurrentSchoolState(prev => ({ ...prev, ...result }));
+      await supabaseService.updateSchoolConfig(id, updated);
+    } catch (err) {
+      console.warn('[TenantContext] updateSchoolConfig cache warning:', err);
+    }
+
+    // 3. Synchronisation Supabase
+    try {
+      const { id: _id, created_at: _ca, ...cleanUpdates } = updated as any;
+      const result = await schoolService.update(id, cleanUpdates);
+      if (result) {
+        setSchools(prev => prev.map(s => s.id === id ? { ...s, ...result } : s));
+        if (currentSchool.id === id) {
+          setCurrentSchoolState(prev => ({ ...prev, ...result }));
+        }
       }
     } catch (e) {
-      console.error('[TenantContext] updateSchool error:', e);
-      throw e;
+      console.warn('[TenantContext] Supabase update school warning:', e);
     }
   };
 

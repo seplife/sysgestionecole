@@ -19,8 +19,7 @@ export const SchoolManagementModule: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateCurrentSchool(formData);
-    await supabaseService.updateSchoolConfig(formData.id, formData);
+    await updateCurrentSchool(formData);
 
     if (formData.director_name) {
       const parts = formData.director_name.trim().split(' ');

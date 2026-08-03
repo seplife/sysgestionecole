@@ -131,9 +131,10 @@ export const schoolService = {
 
   async update(id: string, updates: Partial<SchoolInsert>): Promise<School> {
     requireValidUuid(id, 'School ID');
+    const { id: _id, created_at: _ca, ...cleanUpdates } = updates as any;
     const { data, error } = await supabase
       .from('schools')
-      .update(updates)
+      .update(cleanUpdates)
       .eq('id', id)
       .select()
       .single();

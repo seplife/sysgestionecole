@@ -481,7 +481,8 @@ export const supabaseService = {
     }
 
     try {
-      const { error } = await supabase.from('schools').upsert({ id: schoolId, ...updates });
+      const { id: _id, created_at: _ca, ...cleanUpdates } = updates as any;
+      const { error } = await supabase.from('schools').update(cleanUpdates).eq('id', schoolId);
       if (error) console.warn('[Supabase Update School Error]:', error);
     } catch (e) {
       console.warn('[Supabase Sync Error]:', e);
