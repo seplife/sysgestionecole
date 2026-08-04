@@ -148,62 +148,305 @@ export const OnboardingWizardModule: React.FC<OnboardingWizardProps> = ({ onComp
   };
 
   // Final Activation Handler Step 5
-  const handleFinalActivation = async () => {
-    setIsSubmitting(true);
-    setErrorMsg(null);
+const handleFinalActivation = async () => {
+  setIsSubmitting(true);
+  setErrorMsg(null);
 
-    try {
-      // 1. S'il s'agit d'un nouveau responsable avec email & mot de passe
-      if (adminProfile.email.trim() && adminProfile.password) {
-        const email = adminProfile.email.trim().toLowerCase();
-        const password = adminProfile.password;
+  try {
+    // ============================================================
+    // 1. VALIDATION DES DONNÉES DU RESPONSABLE
+    // ============================================================
+    const email = adminProfile.email.trim().toLowerCase();
+    const password = adminProfile.password;
 
-        const { error: signUpErr } = await supabase.auth.signUp({
+    if (!email || !password) {
+      throw new Error(
+        'Les informations de connexion du responsable sont obligatoires.'
+      );
+    }
+
+    if (!adminProfile.firstName.trim() || !adminProfile.lastName.trim()) {
+      throw new Error(
+        'Le prénom et le nom du responsable sont obligatoires.'
+      );
+    }
+
+    // ============================================================
+    // 2. VÉRIFICATION D'UNE SESSION EXISTANTE
+    // ============================================================
+    let {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      console.error(
+        '[Onboarding] Erreur lors de la récupération de la session:',
+        sessionError
+      );
+    }
+
+    // ============================================================
+    // 3. CRÉATION DU COMPTE RESPONSABLE SI AUCUNE SESSION
+    // ============================================================
+    if (!session?.user) {
+      console.log(
+        '[Onboarding] Aucune session active. Tentative d\'authentification...'
+      );
+
+      // ------------------------------------------------------------
+      // 3A. Tentative de connexion d'abord
+      // ------------------------------------------------------------
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({
           email,
           password,
-          options: {
-            data: {
-              first_name: adminProfile.firstName,
-              last_name: adminProfile.lastName
-            }
-          }
         });
 
-        if (signUpErr && !signUpErr.message.includes('already registered')) {
-          console.warn('[Onboarding] Supabase signUp notice:', signUpErr.message);
+      if (!signInError && signInData.session?.user) {
+        session = signInData.session;
+
+        console.log(
+          '[Onboarding] Connexion réussie:',
+          session.user.id
+        );
+      } else {
+        // ----------------------------------------------------------
+        // 3B. Si le compte n'existe pas, création du compte
+        // ----------------------------------------------------------
+        console.log(
+          '[Onboarding] Connexion impossible. Tentative de création du compte...'
+        );
+
+        const { data: signUpData, error: signUpError } =
+          await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                first_name: adminProfile.firstName.trim(),
+                last_name: adminProfile.lastName.trim(),
+                phone: adminProfile.phone.trim(),
+                role: 'school_admin',
+              },
+            },
+          });
+
+        if (signUpError) {
+          // Si le compte existe déjà, on tente une nouvelle connexion.
+          if (
+            signUpError.message.toLowerCase().includes('already registered') ||
+            signUpError.message.toLowerCase().includes('already exists')
+          ) {
+            console.log(
+              '[Onboarding] Le compte existe déjà. Nouvelle tentative de connexion...'
+            );
+
+            const { data: retrySignInData, error: retrySignInError } =
+              await supabase.auth.signInWithPassword({
+                email,
+                password,
+              });
+
+            if (retrySignInError || !retrySignInData.session?.user) {
+              throw new Error(
+                'Le compte responsable existe déjà, mais la connexion a échoué. Vérifiez votre adresse e-mail et votre mot de passe.'
+              );
+            }
+
+            session = retrySignInData.session;
+          } else {
+            throw new Error(
+              `Impossible de créer le compte responsable : ${signUpError.message}`
+            );
+          }
+        } else {
+          // --------------------------------------------------------
+          // 3C. Vérification immédiate de la session après signUp
+          // --------------------------------------------------------
+          session = signUpData.session;
+
+          if (!session?.user) {
+            // Vérifier une nouvelle fois la session persistée
+            const {
+              data: { session: refreshedSession },
+              error: refreshedSessionError,
+            } = await supabase.auth.getSession();
+
+            if (refreshedSessionError) {
+              console.error(
+                '[Onboarding] Erreur récupération session après inscription:',
+                refreshedSessionError
+              );
+            }
+
+            session = refreshedSession;
+
+            // ------------------------------------------------------
+            // 3D. Si toujours aucune session, tenter login
+            // ------------------------------------------------------
+            if (!session?.user) {
+              const { data: loginData, error: loginError } =
+                await supabase.auth.signInWithPassword({
+                  email,
+                  password,
+                });
+
+              if (loginError || !loginData.session?.user) {
+                throw new Error(
+                  'Le compte a été créé, mais aucune session Supabase active n\'est disponible. Si la confirmation e-mail est activée dans Supabase, veuillez confirmer votre adresse e-mail avant de continuer.'
+                );
+              }
+
+              session = loginData.session;
+            }
+          }
         }
-
-        await login(email, password);
       }
-
-      // 2. Création de l'établissement dans Supabase avec ID valide autogénéré
-      const newSchoolPayload: Partial<School> = {
-        name: schoolData.name,
-        slug: schoolData.name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString().slice(-4),
-        registration_number: schoolData.registrationNumber,
-        school_type: schoolData.schoolType,
-        address: schoolData.address || `${schoolData.city}, Côte d'Ivoire`,
-        city: schoolData.city,
-        phone: schoolData.phone,
-        whatsapp: schoolData.whatsapp,
-        email: schoolData.email,
-        logo_url: schoolData.logoUrl,
-        director_name: schoolData.directorName || `${adminProfile.lastName} ${adminProfile.firstName}`,
-        status: paymentOption === 'trial' ? 'active' : 'pending'
-      };
-
-      // 3. Attendre la création de l'école et le rattachement complet dans Supabase
-      await addNewSchool(newSchoolPayload as School);
-
-      // 4. Clôturer le wizard d'activation
-      onComplete();
-    } catch (err: any) {
-      console.error('[Onboarding] Error in handleFinalActivation:', err);
-      setErrorMsg(err?.message || 'Une erreur est survenue lors de l\'activation SaaS de votre établissement.');
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+
+    // ============================================================
+    // 4. GARANTIE ABSOLUE : UN UTILISATEUR AUTHENTIFIÉ EST REQUIS
+    // ============================================================
+    if (!session?.user) {
+      throw new Error(
+        'Impossible de poursuivre : aucun utilisateur Supabase authentifié.'
+      );
+    }
+
+    // ============================================================
+    // 5. RÉCUPÉRATION DE L'UTILISATEUR AUTHENTIFIÉ
+    // ============================================================
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.error(
+        '[Onboarding] Impossible de récupérer l\'utilisateur authentifié:',
+        userError
+      );
+
+      throw new Error(
+        'Votre session d\'authentification Supabase est introuvable. Veuillez vous reconnecter.'
+      );
+    }
+
+    console.log('================================================');
+    console.log('[Onboarding] UTILISATEUR AUTHENTIFIÉ');
+    console.log('User ID:', user.id);
+    console.log('User Email:', user.email);
+    console.log('================================================');
+
+    // ============================================================
+    // 6. VÉRIFICATION DU PROFIL UTILISATEUR
+    // ============================================================
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id, organization_id, school_id, role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error(
+        '[Onboarding] Erreur récupération user_profiles:',
+        profileError
+      );
+    }
+
+    console.log('================================================');
+    console.log('[Onboarding] PROFIL UTILISATEUR');
+    console.log('Profile:', profile);
+    console.log('Profile Error:', profileError);
+    console.log('================================================');
+
+    // ============================================================
+    // 7. CONSTRUCTION DU PAYLOAD DE L'ÉCOLE
+    // ============================================================
+    const newSchoolPayload: Partial<School> = {
+      name: schoolData.name.trim(),
+      slug:
+        schoolData.name
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '') +
+        '-' +
+        Date.now().toString().slice(-4),
+
+      registration_number: schoolData.registrationNumber.trim(),
+      school_type: schoolData.schoolType,
+      address:
+        schoolData.address.trim() ||
+        `${schoolData.city.trim()}, Côte d'Ivoire`,
+      city: schoolData.city.trim(),
+      phone: schoolData.phone.trim(),
+      whatsapp: schoolData.whatsapp.trim(),
+      email: schoolData.email.trim().toLowerCase(),
+      logo_url: schoolData.logoUrl,
+      director_name:
+        schoolData.directorName.trim() ||
+        `${adminProfile.lastName.trim()} ${adminProfile.firstName.trim()}`,
+      status: paymentOption === 'trial' ? 'active' : 'pending',
+    };
+
+    // ============================================================
+    // 8. LOG DU PAYLOAD AVANT INSERTION
+    // ============================================================
+    console.log('================================================');
+    console.log('[Onboarding] CRÉATION ÉCOLE');
+    console.log('Authenticated User ID:', user.id);
+    console.log('Organization ID:', profile?.organization_id);
+    console.log('Current School ID:', profile?.school_id);
+    console.log('Role:', profile?.role);
+    console.log('School Payload:', newSchoolPayload);
+    console.log('================================================');
+
+    // ============================================================
+    // 9. CRÉATION DE L'ÉCOLE
+    // ============================================================
+    await addNewSchool(newSchoolPayload as School);
+
+    // ============================================================
+    // 10. VÉRIFICATION POST-CRÉATION
+    // ============================================================
+    const {
+      data: { session: finalSession },
+    } = await supabase.auth.getSession();
+
+    if (!finalSession?.user) {
+      throw new Error(
+        'L\'école a été créée, mais la session utilisateur n\'est plus disponible.'
+      );
+    }
+
+    console.log(
+      '[Onboarding] École créée avec succès pour:',
+      finalSession.user.id
+    );
+
+    // ============================================================
+    // 11. FIN DU WIZARD
+    // ============================================================
+    onComplete();
+  } catch (err: any) {
+    console.error(
+      '[Onboarding] Error in handleFinalActivation:',
+      err
+    );
+
+    const message =
+      err?.message ||
+      'Une erreur est survenue lors de l\'activation SaaS de votre établissement.';
+
+    setErrorMsg(message);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 md:p-8 font-sans relative overflow-hidden">
