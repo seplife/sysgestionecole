@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { School, Organization, AcademicYear } from '../types/database';
 import { schoolService } from '../services/supabase';
 import { supabaseService } from '../services/supabaseService';
+import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
 // ─────────────────────────────────────────────────────────────
@@ -207,7 +208,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // ── Mettre à jour l'école courante ───────────────────────
   const updateCurrentSchool = async (updated: Partial<School>) => {
     if (!currentSchool.id) return;
-    
+
     // 1. Mise à jour optimiste du state React immédiat pour le Navbar et le reste de l'UI
     const newSchool = { ...currentSchool, ...updated };
     setCurrentSchoolState(newSchool);
@@ -267,32 +268,47 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // ── Ajouter une école ────────────────────────────────────
-// Dans le TenantContext.tsx, améliorer la gestion d'erreurs
+  // ✅ CORRECTION : l'ancienne vérification s'appuyait sur
+  // `(supabaseService as any).getUser` / `(supabaseService as any).client`,
+  // qui n'existent ni l'un ni l'autre sur `supabaseService` (voir
+  // services/supabaseService.ts — il utilise `supabase` en interne, sans
+  // exposer ni méthode `getUser`, ni propriété `client`). Le ternaire
+  // renvoyait donc systématiquement `undefined`, et l'erreur
+  // « Vous devez être connecté » était levée à chaque appel, même pour un
+  // utilisateur bel et bien authentifié.
+  //
+  // On utilise maintenant le client Supabase importé directement
+  // (le même que celui utilisé par AuthContext.tsx), avec `getSession()`
+  // plutôt que `getUser()` : `getSession()` lit la session depuis le
+  // storage local (rapide, pas d'aller-retour réseau), alors que
+  // `getUser()` revalide le token auprès du serveur à chaque appel, ce qui
+  // peut échouer/timeout inutilement sur un réseau lent (ex. dev local).
+  //
+  // On s'appuie aussi sur `isAuthenticated` (déjà résolu par AuthContext)
+  // comme première ligne de défense, avant même de solliciter Supabase.
+  const addNewSchool = async (school: School) => {
+    try {
+      if (!isAuthenticated) {
+        throw new Error('Vous devez être connecté pour créer une école');
+      }
 
-const addNewSchool = async (school: School) => {
-  try {
-    // Vérifier l'authentification avant d'appeler le service
-    // Utiliser le wrapper supabaseService (plutôt que la variable globale `supabase`)
-    const userResult = await ((supabaseService as any).getUser
-      ? (supabaseService as any).getUser()
-      : (supabaseService as any).client?.auth.getUser());
-    const user = userResult?.data?.user;
-    if (!user) {
-      throw new Error('Vous devez être connecté pour créer une école');
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data?.session?.user) {
+        throw new Error('Vous devez être connecté pour créer une école');
+      }
+
+      const created = await schoolService.create(school as any);
+      setSchools(prev => [created, ...prev.filter(s => s.id !== created.id)]);
+      setCurrentSchoolState(created);
+      saveCurrentSchoolId(created.id);
+      await loadSchools();
+      return created;
+    } catch (e) {
+      console.error('[TenantContext] addNewSchool error:', e);
+      // Relancer l'erreur pour que le composant appelant puisse la gérer
+      throw e;
     }
-
-    const created = await schoolService.create(school as any);
-    setSchools(prev => [created, ...prev.filter(s => s.id !== created.id)]);
-    setCurrentSchoolState(created);
-    saveCurrentSchoolId(created.id);
-    await loadSchools();
-    return created;
-  } catch (e) {
-    console.error('[TenantContext] addNewSchool error:', e);
-    // Relancer l'erreur pour que le composant appelant puisse la gérer
-    throw e;
-  }
-};
+  };
 
   // ── Supprimer une école ──────────────────────────────────
   const deleteSchool = async (id: string) => {
