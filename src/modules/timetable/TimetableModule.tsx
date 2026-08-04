@@ -1,301 +1,297 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Calendar, AlertTriangle, Printer, CheckCircle2, Plus, Edit2, Trash2, X, Save } from 'lucide-react';
-import { supabaseService } from '../../services/supabaseService';
+import {
+  Clock,
+  Layers,
+  Sliders,
+  BookOpen,
+  UserCheck,
+  ShieldCheck,
+  Sparkles,
+  Calendar,
+  AlertTriangle,
+  FileSpreadsheet,
+  Download,
+  Users,
+  DoorOpen,
+  CheckCircle2,
+  RefreshCw,
+  Edit2,
+  Printer
+} from 'lucide-react';
+import { timetableService } from '../../services/timetable/timetableService';
+import { TimetableSolver } from '../../services/timetable/timetableSolver';
+import {
+  TimetableSettings,
+  TimetablePeriod,
+  TimetableEntry,
+  TimetableVersion,
+  TimetableConflict,
+  TimetableSubstitution,
+  QualityScoreBreakdown,
+  GenerationStatistics
+} from '../../types/timetable';
 
-import { SchoolClass } from '../../types/database';
-
-interface CourseSlot {
-  id: string;
-  day: string;
-  timeSlot: string;
-  subject: string;
-  teacher: string;
-  room: string;
-  conflict?: boolean;
-}
+// Tabs
+import { TimetableDashboardTab } from './tabs/TimetableDashboardTab';
+import { TimetableSettingsTab } from './tabs/TimetableSettingsTab';
+import { SubjectHoursTab } from './tabs/SubjectHoursTab';
+import { AvailabilitiesTab } from './tabs/AvailabilitiesTab';
+import { ConstraintsTab } from './tabs/ConstraintsTab';
+import { GeneratorTab } from './tabs/GeneratorTab';
+import { ClassTimetableTab } from './tabs/ClassTimetableTab';
+import { TeacherTimetableTab } from './tabs/TeacherTimetableTab';
+import { RoomTimetableTab } from './tabs/RoomTimetableTab';
+import { GlobalTimetableTab } from './tabs/GlobalTimetableTab';
+import { AssessmentsTab } from './tabs/AssessmentsTab';
+import { SpecialActivitiesTab } from './tabs/SpecialActivitiesTab';
+import { SubstitutionsTab } from './tabs/SubstitutionsTab';
+import { ConflictsTab } from './tabs/ConflictsTab';
+import { VersionsTab } from './tabs/VersionsTab';
+import { ExportsTab } from './tabs/ExportsTab';
 
 export const TimetableModule: React.FC = () => {
-  const [selectedClass, setSelectedClass] = useState('3ème 2');
-  const [classList, setClassList] = useState<SchoolClass[]>([]);
-  const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
-  const timeSlots = ['07h30 - 09h30', '09h30 - 11h30', '11h30 - 13h30 (Pause)', '13h30 - 15h30', '15h30 - 17h30'];
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [settings, setSettings] = useState<TimetableSettings | null>(null);
+  const [periods, setPeriods] = useState<TimetablePeriod[]>([]);
+  const [entries, setEntries] = useState<TimetableEntry[]>([]);
+  const [versions, setVersions] = useState<TimetableVersion[]>([]);
+  const [substitutions, setSubstitutions] = useState<TimetableSubstitution[]>([]);
+  const [conflicts, setConflicts] = useState<TimetableConflict[]>([]);
+  const [selectedClass, setSelectedClass] = useState<string>('3ème 1');
 
-  const [courses, setCourses] = useState<CourseSlot[]>([]);
-
-  useEffect(() => {
-    supabaseService.fetchClasses().then(classes => {
-      if (classes && classes.length > 0) {
-        setClassList(classes);
-        if (!classes.some(c => c.name === selectedClass)) {
-          setSelectedClass(classes[0].name);
-        }
-      }
-    });
-
-    supabaseService.fetchTimetableSlots().then(data => {
-      if (data && data.length > 0) {
-        setCourses(data);
-      } else {
-        const defaultSlots: CourseSlot[] = [
-          { id: '1', day: 'Lundi', timeSlot: '07h30 - 09h30', subject: 'Mathématiques', teacher: 'Dr. Yao KOUADIO', room: 'Salle B-12' },
-          { id: '2', day: 'Lundi', timeSlot: '09h30 - 11h30', subject: 'Français', teacher: 'Mme BINTA SY', room: 'Salle B-12' },
-          { id: '3', day: 'Lundi', timeSlot: '13h30 - 15h30', subject: 'Physique-Chimie', teacher: 'M. KOUAMÉ Pierre', room: 'Labo 2' },
-          { id: '4', day: 'Mardi', timeSlot: '07h30 - 09h30', subject: 'Histoire-Géo', teacher: 'Mme AMANI Rose', room: 'Salle B-12' },
-          { id: '5', day: 'Mardi', timeSlot: '09h30 - 11h30', subject: 'Anglais', teacher: 'M. John SMITH', room: 'Salle B-12' },
-          { id: '6', day: 'Mardi', timeSlot: '13h30 - 15h30', subject: 'SVT', teacher: 'Dr. Yao KOUADIO', room: 'Labo 1' },
-          { id: '7', day: 'Mercredi', timeSlot: '07h30 - 09h30', subject: 'EPS (Sport)', teacher: 'Coach ZOHOU', room: 'Terrain Synthétique' },
-          { id: '8', day: 'Mercredi', timeSlot: '09h30 - 11h30', subject: 'Mathématiques', teacher: 'Dr. Yao KOUADIO', room: 'Salle B-12' },
-          { id: '9', day: 'Jeudi', timeSlot: '07h30 - 09h30', subject: 'Français', teacher: 'Mme BINTA SY', room: 'Salle B-12' },
-          { id: '10', day: 'Jeudi', timeSlot: '09h30 - 11h30', subject: 'Physique-Chimie', teacher: 'M. KOUAMÉ Pierre', room: 'Labo 2' },
-          { id: '11', day: 'Vendredi', timeSlot: '07h30 - 09h30', subject: 'SVT', teacher: 'Dr. Yao KOUADIO', room: 'Labo 1' },
-        ];
-        setCourses(defaultSlots);
-      }
-    });
-  }, []);
-
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<CourseSlot | null>(null);
-  const [newCourse, setNewCourse] = useState({
-    day: 'Lundi',
-    timeSlot: '07h30 - 09h30',
-    subject: 'Mathématiques',
-    teacher: 'Dr. Yao KOUADIO',
-    room: 'Salle B-12'
+  const [qualityScore, setQualityScore] = useState<QualityScoreBreakdown>({
+    globalScore: 94,
+    hardConstraintsScore: 100,
+    pedagogicalBalanceScore: 92,
+    roomOptimizationScore: 90,
+    teacherOptimizationScore: 95,
+    weeklyDistributionScore: 91
   });
 
-  const getCourse = (day: string, slot: string) => {
-    return courses.find(c => c.day === day && c.timeSlot === slot);
-  };
+  const [stats, setStats] = useState<GenerationStatistics>({
+    totalClassesConfigured: 11,
+    totalTeachersAvailable: 18,
+    totalRoomsAvailable: 24,
+    totalSubjectsConfigured: 8,
+    totalCoursesScheduled: 48,
+    totalCoursesPending: 0,
+    hardConflictsCount: 0,
+    softConflictsCount: 2,
+    occupancyRate: 88,
+    freeSlotsCount: 32
+  });
 
-  const handleAddCourse = (e: React.FormEvent) => {
-    e.preventDefault();
-    const created: CourseSlot = {
-      id: `crs-${Date.now()}`,
-      ...newCourse
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      const s = await timetableService.getSettings();
+      const p = await timetableService.getPeriods();
+      const e = await timetableService.getEntries();
+      const v = await timetableService.getVersions();
+      const sub = await timetableService.getSubstitutions();
+
+      const c = TimetableSolver.detectConflicts(e);
+
+      setSettings(s);
+      setPeriods(p);
+      setEntries(e);
+      setVersions(v);
+      setSubstitutions(sub);
+      setConflicts(c);
+      setIsLoading(false);
     };
-    const updated = [...courses.filter(c => !(c.day === newCourse.day && c.timeSlot === newCourse.timeSlot)), created];
-    setCourses(updated);
-    supabaseService.saveTimetableSlot(created);
-    setShowAddModal(false);
+
+    loadData();
+  }, []);
+
+  const handleSaveSettings = async (updated: Partial<TimetableSettings>) => {
+    const res = await timetableService.saveSettings(updated);
+    setSettings(res);
   };
 
-  const handleSaveEditCourse = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingCourse) return;
-    const updated = courses.map(c => c.id === editingCourse.id ? editingCourse : c);
-    setCourses(updated);
-    supabaseService.saveTimetableSlot(editingCourse);
-    setEditingCourse(null);
+  const handleSolverComplete = (
+    genEntries: TimetableEntry[],
+    genConflicts: TimetableConflict[],
+    score: QualityScoreBreakdown,
+    st: GenerationStatistics
+  ) => {
+    setEntries(genEntries);
+    setConflicts(genConflicts);
+    setQualityScore(score);
+    setStats(st);
+    timetableService.saveEntries(genEntries);
   };
 
-  const handleDeleteCourse = (id: string) => {
-    if (window.confirm('Voulez-vous supprimer ce cours du planning ?')) {
-      setCourses(courses.filter(c => c.id !== id));
-      supabaseService.deleteTimetableSlot(id);
-    }
+  const handleResolveConflict = (conflictId: string) => {
+    const updatedConflicts = conflicts.filter(c => c.id !== conflictId);
+    setConflicts(updatedConflicts);
+    setStats(prev => ({ ...prev, hardConflictsCount: Math.max(0, prev.hardConflictsCount - 1) }));
   };
+
+  const handleAddSubstitution = async (subData: any) => {
+    const created = await timetableService.addSubstitution(subData);
+    setSubstitutions([created, ...substitutions]);
+  };
+
+  const handleCreateVersion = async (title: string, notes?: string) => {
+    const created = await timetableService.createVersion(title, notes);
+    setVersions([...versions, created]);
+  };
+
+  const handleDeleteCourse = async (id: string) => {
+    await timetableService.deleteEntry(id);
+    setEntries(entries.filter(e => e.id !== id));
+  };
+
+  if (isLoading || !settings) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <RefreshCw className="w-8 h-8 text-brand-500 animate-spin" />
+          <span className="text-xs font-bold text-slate-500">Chargement de l'Emploi du Temps+...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const tabsConfig = [
+    { id: 'dashboard', label: 'Tableau de bord', category: 'Synthèse' },
+    { id: 'settings', label: 'Paramètres & S1-S9', category: 'Structure' },
+    { id: 'subject_hours', label: 'Volumes Horaire', category: 'Structure' },
+    { id: 'availabilities', label: 'Disponibilités', category: 'Structure' },
+    { id: 'constraints', label: 'Contraintes & Règles', category: 'Structure' },
+    { id: 'generator', label: 'Générateur Automatique', category: 'Solver' },
+    { id: 'conflicts', label: `Conflits (${conflicts.length})`, category: 'Solver' },
+    { id: 'class_timetable', label: 'Vue par Classe', category: 'Consultation' },
+    { id: 'teacher_timetable', label: 'Vue par Enseignant', category: 'Consultation' },
+    { id: 'room_timetable', label: 'Vue par Salle', category: 'Consultation' },
+    { id: 'global_timetable', label: 'Vue Globale Master', category: 'Consultation' },
+    { id: 'assessments', label: 'Devoirs de Niveau', category: 'Activités' },
+    { id: 'special_activities', label: 'Renforcement & Soutien', category: 'Activités' },
+    { id: 'substitutions', label: 'Remplacements & Quotidien', category: 'Activités' },
+    { id: 'versions', label: 'Versionnage & Historique', category: 'Gestion' },
+    { id: 'exports', label: 'Exports & PDF', category: 'Gestion' }
+  ];
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
+      {/* Top Main Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-            <Clock className="w-7 h-7 text-brand-500" />
-            <span>Emploi du Temps Hebdomadaire</span>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
+            <Clock className="w-8 h-8 text-brand-500" />
+            <span>Emploi du Temps+ / Timetable Management</span>
           </h1>
-          <p className="text-xs text-slate-400">Planning dynamique avec détection intelligente des conflits de salle et d'enseignant</p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <select 
-            value={selectedClass} 
-            onChange={(e) => setSelectedClass(e.target.value)}
-            className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-white"
-          >
-            {classList.length > 0 ? (
-              classList.map(cls => (
-                <option key={cls.id} value={cls.name}>Classe: {cls.name}</option>
-              ))
-            ) : (
-              <>
-                <option value="3ème 2">Classe: 3ème 2</option>
-                <option value="6ème 1">Classe: 6ème 1</option>
-                <option value="Tle A2">Classe: Tle A2</option>
-              </>
-            )}
-          </select>
-
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Ajouter un Cours</span>
-          </button>
-
-          <button 
-            onClick={() => window.print()}
-            className="bg-slate-800 hover:bg-slate-900 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md"
-          >
-            <Printer className="w-4 h-4" />
-            <span>PDF</span>
-          </button>
+          <p className="text-xs text-slate-400">
+            Moteur intelligent de génération sous contraintes & gestion complète du cycle de vie des emplois du temps scolaires
+          </p>
         </div>
       </div>
 
-      {/* Grid Timetable */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-900 text-white">
-                <th className="p-3 font-bold border-b border-slate-800 w-32">Horaires</th>
-                {days.map(d => (
-                  <th key={d} className="p-3 font-bold border-b border-slate-800 text-center uppercase tracking-wider">{d}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-              {timeSlots.map(slot => (
-                <tr key={slot} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                  <td className="p-3 font-mono font-bold bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-slate-800">
-                    {slot}
-                  </td>
-                  {days.map(day => {
-                    const item = getCourse(day, slot);
-                    if (slot.includes('Pause')) {
-                      return (
-                        <td key={day} className="p-2 bg-slate-100/70 dark:bg-slate-800/20 text-center text-slate-400 font-bold italic">
-                          PAUSE DÉJEUNER
-                        </td>
-                      );
-                    }
-                    return (
-                      <td key={day} className="p-2 border-r border-slate-100 dark:border-slate-800/50">
-                        {item ? (
-                          <div className="p-2.5 rounded-xl border text-xs space-y-1 bg-brand-50/70 dark:bg-brand-950/40 border-brand-200 dark:border-brand-900/60 text-brand-900 dark:text-brand-200 relative group">
-                            <div className="flex items-center justify-between">
-                              <div className="font-extrabold text-xs">{item.subject}</div>
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                <button onClick={() => setEditingCourse(item)} className="p-0.5 text-amber-600 hover:text-amber-800"><Edit2 className="w-3 h-3" /></button>
-                                <button onClick={() => handleDeleteCourse(item.id)} className="p-0.5 text-rose-600 hover:text-rose-800"><Trash2 className="w-3 h-3" /></button>
-                              </div>
-                            </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{item.teacher}</div>
-                            <span className="inline-block bg-white dark:bg-slate-800 font-bold text-[9px] px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                              {item.room}
-                            </span>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setNewCourse({ day, timeSlot: slot, subject: 'Mathématiques', teacher: 'Dr. Yao KOUADIO', room: 'Salle B-12' });
-                              setShowAddModal(true);
-                            }}
-                            className="w-full h-16 flex items-center justify-center text-slate-300 hover:text-brand-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-[10px] border border-dashed border-transparent hover:border-slate-300 transition-all"
-                          >
-                            + Ajouter
-                          </button>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Main Tab Navigation Submenu */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-2xl shadow-xs overflow-x-auto">
+        <div className="flex items-center gap-1.5 min-w-max">
+          {tabsConfig.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 ${
+                  isActive
+                    ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Modal Add Course */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-fadeIn">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="font-extrabold text-slate-900 dark:text-white text-lg flex items-center gap-2">
-                <Plus className="w-5 h-5 text-brand-500" />
-                <span>Ajouter un Créneau Cours</span>
-              </h3>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
+      {/* Active Tab Content */}
+      <div className="transition-all duration-300">
+        {activeTab === 'dashboard' && (
+          <TimetableDashboardTab
+            qualityScore={qualityScore}
+            stats={stats}
+            onNavigateToGenerator={() => setActiveTab('generator')}
+            onNavigateToConflicts={() => setActiveTab('conflicts')}
+          />
+        )}
 
-            <form onSubmit={handleAddCourse} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Jour</label>
-                  <select value={newCourse.day} onChange={(e) => setNewCourse({...newCourse, day: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl font-bold">
-                    {days.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Horaires</label>
-                  <select value={newCourse.timeSlot} onChange={(e) => setNewCourse({...newCourse, timeSlot: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl font-mono text-[11px]">
-                    {timeSlots.filter(s => !s.includes('Pause')).map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-              </div>
+        {activeTab === 'settings' && (
+          <TimetableSettingsTab
+            settings={settings}
+            periods={periods}
+            onSaveSettings={handleSaveSettings}
+          />
+        )}
 
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Matière *</label>
-                <input type="text" required value={newCourse.subject} onChange={(e) => setNewCourse({...newCourse, subject: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl" />
-              </div>
+        {activeTab === 'subject_hours' && <SubjectHoursTab />}
 
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Enseignant *</label>
-                <input type="text" required value={newCourse.teacher} onChange={(e) => setNewCourse({...newCourse, teacher: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl" />
-              </div>
+        {activeTab === 'availabilities' && <AvailabilitiesTab />}
 
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Salle *</label>
-                <input type="text" required value={newCourse.room} onChange={(e) => setNewCourse({...newCourse, room: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl" />
-              </div>
+        {activeTab === 'constraints' && <ConstraintsTab />}
 
-              <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 font-bold rounded-xl">Annuler</button>
-                <button type="submit" className="flex-1 py-2.5 bg-brand-600 text-white font-bold rounded-xl shadow-md">Enregistrer</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+        {activeTab === 'generator' && (
+          <GeneratorTab
+            entries={entries}
+            periods={periods}
+            onSolverComplete={handleSolverComplete}
+          />
+        )}
 
-      {/* Modal Edit Course */}
-      {editingCourse && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-fadeIn">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="font-extrabold text-slate-900 dark:text-white text-lg flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-amber-500" />
-                <span>Modifier le Cours</span>
-              </h3>
-              <button onClick={() => setEditingCourse(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
+        {activeTab === 'conflicts' && (
+          <ConflictsTab
+            conflicts={conflicts}
+            onResolveConflict={handleResolveConflict}
+          />
+        )}
 
-            <form onSubmit={handleSaveEditCourse} className="space-y-3 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Matière</label>
-                <input type="text" required value={editingCourse.subject} onChange={(e) => setEditingCourse({...editingCourse, subject: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl" />
-              </div>
+        {activeTab === 'class_timetable' && (
+          <ClassTimetableTab
+            entries={entries}
+            periods={periods}
+            selectedClass={selectedClass}
+            onSelectClass={setSelectedClass}
+            onAddCourse={() => {}}
+            onDeleteCourse={handleDeleteCourse}
+          />
+        )}
 
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Enseignant</label>
-                <input type="text" required value={editingCourse.teacher} onChange={(e) => setEditingCourse({...editingCourse, teacher: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl" />
-              </div>
+        {activeTab === 'teacher_timetable' && (
+          <TeacherTimetableTab entries={entries} periods={periods} />
+        )}
 
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Salle</label>
-                <input type="text" required value={editingCourse.room} onChange={(e) => setEditingCourse({...editingCourse, room: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-xl" />
-              </div>
+        {activeTab === 'room_timetable' && (
+          <RoomTimetableTab entries={entries} periods={periods} />
+        )}
 
-              <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button type="button" onClick={() => setEditingCourse(null)} className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 font-bold rounded-xl">Annuler</button>
-                <button type="submit" className="flex-1 py-2.5 bg-brand-600 text-white font-bold rounded-xl shadow-md">Sauvegarder</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+        {activeTab === 'global_timetable' && (
+          <GlobalTimetableTab entries={entries} periods={periods} />
+        )}
+
+        {activeTab === 'assessments' && <AssessmentsTab />}
+
+        {activeTab === 'special_activities' && <SpecialActivitiesTab />}
+
+        {activeTab === 'substitutions' && (
+          <SubstitutionsTab
+            substitutions={substitutions}
+            onAddSubstitution={handleAddSubstitution}
+          />
+        )}
+
+        {activeTab === 'versions' && (
+          <VersionsTab versions={versions} onCreateVersion={handleCreateVersion} />
+        )}
+
+        {activeTab === 'exports' && <ExportsTab entries={entries} />}
+      </div>
     </div>
   );
 };

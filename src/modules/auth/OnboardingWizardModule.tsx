@@ -78,7 +78,7 @@ export const OnboardingWizardModule: React.FC<OnboardingWizardProps> = ({ onComp
     {
       id: 'essentiel',
       name: 'Essentiel',
-      price: '150 000 FCFA',
+      price: '65 000 FCFA',
       period: '/ an',
       maxStudents: 200,
       badge: 'Petit Établissement',
@@ -87,7 +87,7 @@ export const OnboardingWizardModule: React.FC<OnboardingWizardProps> = ({ onComp
     {
       id: 'professionnel',
       name: 'Professionnel',
-      price: '350 000 FCFA',
+      price: '80 000 FCFA',
       period: '/ an',
       maxStudents: 500,
       popular: true,
@@ -97,7 +97,7 @@ export const OnboardingWizardModule: React.FC<OnboardingWizardProps> = ({ onComp
     {
       id: 'premium',
       name: 'Premium',
-      price: '650 000 FCFA',
+      price: '100 000 FCFA',
       period: '/ an',
       maxStudents: null,
       badge: 'Grande Structure',
