@@ -9,6 +9,10 @@ import { School, SchoolInsert } from '../../types/database';
 
 export const schoolService = {
   async getAll(): Promise<School[]> {
+    // Utiliser l'utilisateur authentifié pour les politiques RLS
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Utilisateur non authentifié');
+
     const { data, error } = await supabase
       .from('schools')
       .select('*')
@@ -20,6 +24,10 @@ export const schoolService = {
 
   async getById(id: string): Promise<School> {
     requireValidUuid(id, 'School ID');
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Utilisateur non authentifié');
+
     const { data, error } = await supabase
       .from('schools')
       .select('*')
@@ -31,6 +39,10 @@ export const schoolService = {
   },
 
   async create(schoolData: SchoolInsert): Promise<School> {
+    // Vérifier l'authentification avant la création
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Utilisateur non authentifié');
+
     const payload = {
       name: schoolData.name.trim(),
       slug: schoolData.slug?.trim() || `school-${Date.now()}`,
@@ -38,7 +50,7 @@ export const schoolService = {
       motto: schoolData.motto?.trim() || 'Foi, Discipline, Excellence',
       address: schoolData.address?.trim() || null,
       city: schoolData.city?.trim() || 'Abidjan',
-      country: schoolData.country?.trim() || 'Côte d\'Ivoire',
+      country: schoolData.country?.trim() || "Côte d'Ivoire",
       phone: schoolData.phone?.trim() || null,
       whatsapp: schoolData.whatsapp?.trim() || null,
       email: schoolData.email?.trim() || null,
@@ -53,44 +65,71 @@ export const schoolService = {
       (payload as any).id = schoolData.id;
     }
 
+    // Créer l'école avec l'utilisateur authentifié
     const { data, error } = await supabase
       .from('schools')
       .insert(payload)
       .select()
       .single();
 
-    if (error) throw handleSupabaseError(error, 'Création de l\'école');
+    if (error) {
+      console.error('[SchoolService] Create school error:', error);
+      throw handleSupabaseError(error, 'Création de l\'école');
+    }
+
     const createdSchool = data as School;
 
     try {
-      // 1. Rattacher l'utilisateur connecté comme membre et administrateur de la nouvelle école
-      const { data: authData } = await supabase.auth.getUser();
-      if (authData?.user) {
-        const userId = authData.user.id;
+      // 1. Rattacher l'utilisateur connecté comme membre et administrateur
+      const userId = user.id;
 
-        await supabase
+      // Vérifier si le membre existe déjà
+      const { data: existingMember } = await supabase
+        .from('school_members')
+        .select('id')
+        .eq('school_id', createdSchool.id)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!existingMember) {
+        const { error: memberError } = await supabase
           .from('school_members')
-          .upsert({
+          .insert({
             school_id: createdSchool.id,
             user_id: userId,
             role: 'directeur',
             is_active: true
-          }, { onConflict: 'school_id,user_id' });
+          });
 
-        await supabase
-          .from('user_profiles')
-          .update({
-            school_id: createdSchool.id,
-            role: 'directeur'
-          })
-          .eq('id', userId);
+        if (memberError) {
+          console.warn('[SchoolService] Member creation error:', memberError);
+        }
       }
 
-      // 2. Créer l'abonnement SaaS actif par défaut
-      const { data: plans } = await supabase.from('plans').select('id').limit(1);
-      const defaultPlanId = plans && plans.length > 0 ? plans[0].id : '00000000-0000-4000-a000-000000000003';
+      // 2. Mettre à jour le profil utilisateur
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({
+          school_id: createdSchool.id,
+          role: 'directeur'
+        })
+        .eq('id', userId);
 
-      await supabase
+      if (profileError) {
+        console.warn('[SchoolService] Profile update error:', profileError);
+      }
+
+      // 3. Créer l'abonnement SaaS
+      const { data: plans } = await supabase
+        .from('plans')
+        .select('id')
+        .limit(1);
+
+      const defaultPlanId = plans && plans.length > 0 
+        ? plans[0].id 
+        : '00000000-0000-4000-a000-000000000003';
+
+      const { error: subError } = await supabase
         .from('subscriptions')
         .insert({
           school_id: createdSchool.id,
@@ -100,10 +139,15 @@ export const schoolService = {
           expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
         });
 
-      // 3. Initialiser l'année scolaire et les trimestres par défaut
+      if (subError) {
+        console.warn('[SchoolService] Subscription creation error:', subError);
+      }
+
+      // 4. Initialiser l'année scolaire
       const currentYear = new Date().getFullYear();
       const ayName = `${currentYear}-${currentYear + 1}`;
-      const { data: ayData } = await supabase
+      
+      const { data: ayData, error: ayError } = await supabase
         .from('academic_years')
         .insert({
           school_id: createdSchool.id,
@@ -115,12 +159,49 @@ export const schoolService = {
         .select()
         .maybeSingle();
 
+      if (ayError) {
+        console.warn('[SchoolService] Academic year creation error:', ayError);
+      }
+
+      // 5. Créer les trimestres
       if (ayData) {
-        await supabase.from('academic_terms').insert([
-          { school_id: createdSchool.id, academic_year_id: ayData.id, name: '1er Trimestre', period_type: 'Trimestre', start_date: `${currentYear}-09-15`, end_date: `${currentYear}-12-20`, is_current: false },
-          { school_id: createdSchool.id, academic_year_id: ayData.id, name: '2ème Trimestre', period_type: 'Trimestre', start_date: `${currentYear + 1}-01-05`, end_date: `${currentYear + 1}-03-28`, is_current: false },
-          { school_id: createdSchool.id, academic_year_id: ayData.id, name: '3ème Trimestre', period_type: 'Trimestre', start_date: `${currentYear + 1}-04-06`, end_date: `${currentYear + 1}-07-10`, is_current: true }
-        ]);
+        const terms = [
+          { 
+            school_id: createdSchool.id, 
+            academic_year_id: ayData.id, 
+            name: '1er Trimestre', 
+            period_type: 'Trimestre', 
+            start_date: `${currentYear}-09-15`, 
+            end_date: `${currentYear}-12-20`, 
+            is_current: false 
+          },
+          { 
+            school_id: createdSchool.id, 
+            academic_year_id: ayData.id, 
+            name: '2ème Trimestre', 
+            period_type: 'Trimestre', 
+            start_date: `${currentYear + 1}-01-05`, 
+            end_date: `${currentYear + 1}-03-28`, 
+            is_current: false 
+          },
+          { 
+            school_id: createdSchool.id, 
+            academic_year_id: ayData.id, 
+            name: '3ème Trimestre', 
+            period_type: 'Trimestre', 
+            start_date: `${currentYear + 1}-04-06`, 
+            end_date: `${currentYear + 1}-07-10`, 
+            is_current: true 
+          }
+        ];
+
+        const { error: termsError } = await supabase
+          .from('academic_terms')
+          .insert(terms);
+
+        if (termsError) {
+          console.warn('[SchoolService] Terms creation error:', termsError);
+        }
       }
     } catch (suppErr) {
       console.warn('[SchoolService] Initial setup warning (non-blocking):', suppErr);
@@ -131,6 +212,10 @@ export const schoolService = {
 
   async update(id: string, updates: Partial<SchoolInsert>): Promise<School> {
     requireValidUuid(id, 'School ID');
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Utilisateur non authentifié');
+
     const { id: _id, created_at: _ca, ...cleanUpdates } = updates as any;
     const { data, error } = await supabase
       .from('schools')
@@ -145,6 +230,10 @@ export const schoolService = {
 
   async delete(id: string): Promise<void> {
     requireValidUuid(id, 'School ID');
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Utilisateur non authentifié');
+
     const { error } = await supabase
       .from('schools')
       .delete()

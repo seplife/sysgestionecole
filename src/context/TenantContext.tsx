@@ -267,19 +267,32 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // ── Ajouter une école ────────────────────────────────────
-  const addNewSchool = async (school: School) => {
-    try {
-      const created = await schoolService.create(school as any);
-      setSchools(prev => [created, ...prev.filter(s => s.id !== created.id)]);
-      setCurrentSchoolState(created);
-      saveCurrentSchoolId(created.id);
-      await loadSchools();
-      return created;
-    } catch (e) {
-      console.error('[TenantContext] addNewSchool error:', e);
-      throw e;
+// Dans le TenantContext.tsx, améliorer la gestion d'erreurs
+
+const addNewSchool = async (school: School) => {
+  try {
+    // Vérifier l'authentification avant d'appeler le service
+    // Utiliser le wrapper supabaseService (plutôt que la variable globale `supabase`)
+    const userResult = await ((supabaseService as any).getUser
+      ? (supabaseService as any).getUser()
+      : (supabaseService as any).client?.auth.getUser());
+    const user = userResult?.data?.user;
+    if (!user) {
+      throw new Error('Vous devez être connecté pour créer une école');
     }
-  };
+
+    const created = await schoolService.create(school as any);
+    setSchools(prev => [created, ...prev.filter(s => s.id !== created.id)]);
+    setCurrentSchoolState(created);
+    saveCurrentSchoolId(created.id);
+    await loadSchools();
+    return created;
+  } catch (e) {
+    console.error('[TenantContext] addNewSchool error:', e);
+    // Relancer l'erreur pour que le composant appelant puisse la gérer
+    throw e;
+  }
+};
 
   // ── Supprimer une école ──────────────────────────────────
   const deleteSchool = async (id: string) => {
