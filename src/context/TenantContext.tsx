@@ -288,10 +288,12 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // comme première ligne de défense, avant même de solliciter Supabase.
   const addNewSchool = async (school: School) => {
     try {
-      if (!isAuthenticated) {
-        throw new Error('Vous devez être connecté pour créer une école');
-      }
-
+      // On lit directement la session Supabase (stockée localement, pas de réseau)
+      // plutôt que de s'appuyer sur `isAuthenticated` (état React asynchrone).
+      // Cela évite la race condition lors de l'onboarding : après un
+      // `signInWithPassword`, la session est immédiatement disponible dans
+      // le storage local, mais `onAuthStateChange` n'a pas encore re-rendu
+      // AuthContext, donc `isAuthenticated` peut encore valoir `false`.
       const { data, error } = await supabase.auth.getSession();
       if (error || !data?.session?.user) {
         throw new Error('Vous devez être connecté pour créer une école');
