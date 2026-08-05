@@ -79,7 +79,29 @@ export const schoolService = {
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
-      // 1. Créer l'école
+      // ---------------------------------------------------------------
+      // STRATÉGIE PRINCIPALE : Fonction RPC SECURITY DEFINER
+      // Contourne le problème RLS chicken-and-egg (pas encore membre)
+      // et crée atomiquement : école + school_member + user_profile
+      // ---------------------------------------------------------------
+      console.log('[SchoolService] Trying RPC create_school_with_member...');
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('create_school_with_member', { p_school_data: payload });
+
+      if (!rpcError && rpcData) {
+        clearTimeout(timeoutId);
+        console.log('[SchoolService] School created via RPC:', rpcData);
+        return rpcData as School;
+      }
+
+      // Si la RPC échoue (fonction pas encore déployée), fallback sur l'insert direct
+      if (rpcError) {
+        console.warn('[SchoolService] RPC failed, falling back to direct insert:', rpcError);
+      }
+
+      // ---------------------------------------------------------------
+      // STRATÉGIE DE REPLI : Insert direct (nécessite migration 013)
+      // ---------------------------------------------------------------
       const { data, error } = await supabase
         .from('schools')
         .insert(payload)
