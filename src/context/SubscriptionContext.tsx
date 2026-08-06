@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { SaasPlan, SaasSubscriptionRecord, SaasPaymentRecord, AccessCheckResult } from '../types/database';
 import { getLocalCache, setLocalCache } from '../services/supabaseService';
 import { useAuth } from './AuthContext';
@@ -6,6 +6,7 @@ import { useTenant } from './TenantContext';
 import { accessControlService } from '../services/accessControlService';
 
 const defaultPlans: SaasPlan[] = [
+  // ... plans existants inchangés ...
   {
     id: 'plan-essentiel',
     name: 'Essentiel',
@@ -60,7 +61,7 @@ const defaultPlans: SaasPlan[] = [
     price: 650000,
     currency: 'XOF',
     billing_interval: 'yearly',
-    max_students: null, // Illimité
+    max_students: null,
     max_teachers: null,
     max_users: null,
     features: {
@@ -79,17 +80,17 @@ const defaultPlans: SaasPlan[] = [
   }
 ];
 
-const defaultSubscription: SaasSubscriptionRecord = {
-  id: 'sub-palmeraie-01',
-  school_id: 'school-palmeraie-01',
+// ✅ DÉPLACÉ : Subscription par défaut uniquement si nécessaire
+const createDefaultSubscription = (schoolId: string): SaasSubscriptionRecord => ({
+  id: `sub-${schoolId}`,
+  school_id: schoolId,
   plan_id: 'plan-professionnel',
   plan_name: 'Professionnel',
   status: 'active',
-  starts_at: '2025-09-01T00:00:00.000Z',
-  expires_at: '2027-09-01T00:00:00.000Z',
-  trial_ends_at: '2025-09-15T00:00:00.000Z',
+  starts_at: new Date().toISOString(),
+  expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
   created_at: new Date().toISOString()
-};
+});
 
 interface SubscriptionContextType {
   plans: SaasPlan[];
@@ -101,6 +102,7 @@ interface SubscriptionContextType {
   renewSubscription: (planId: string, paymentMethod: SaasPaymentRecord['payment_method'], txRef?: string) => Promise<{ success: boolean; message: string }>;
   updateSubscriptionStatus: (schoolId: string, status: SaasSubscriptionRecord['status']) => void;
   updateSchoolStatus: (schoolId: string, status: 'pending' | 'active' | 'suspended' | 'blocked' | 'cancelled') => void;
+  createTrialSubscription: (schoolId: string) => SaasSubscriptionRecord; // ✅ Nouvelle méthode
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -111,22 +113,18 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const [plans] = useState<SaasPlan[]>(() => getLocalCache('saas_plans', defaultPlans));
   const [subscriptions, setSubscriptions] = useState<SaasSubscriptionRecord[]>(() => 
-    getLocalCache('saas_subscriptions', [defaultSubscription])
+    getLocalCache('saas_subscriptions', [])
   );
   const [payments, setPayments] = useState<SaasPaymentRecord[]>(() => getLocalCache('saas_payments', []));
 
-  const currentSubscription = subscriptions.find(s => s.school_id === currentSchool?.id) || {
-    id: `sub-${currentSchool?.id || 'default'}`,
-    school_id: currentSchool?.id || 'school-palmeraie-01',
-    plan_id: 'plan-professionnel',
-    plan_name: 'Professionnel',
-    status: 'active',
-    starts_at: new Date().toISOString(),
-    expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-    created_at: new Date().toISOString()
-  };
+  // ✅ Trouver l'abonnement courant, avec fallback
+  const currentSubscription = currentSchool?.id 
+    ? subscriptions.find(s => s.school_id === currentSchool.id) || null
+    : null;
 
-  const currentPlan = plans.find(p => p.id === currentSubscription?.plan_id) || plans[1];
+  const currentPlan = currentSubscription 
+    ? plans.find(p => p.id === currentSubscription.plan_id) || null
+    : null;
 
   const accessCheck = accessControlService.canAccessSchoolDashboard(
     user,
@@ -135,19 +133,55 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     currentPlan
   );
 
+  // ✅ Nouvelle méthode pour créer un abonnement d'essai
+  const createTrialSubscription = useCallback((schoolId: string): SaasSubscriptionRecord => {
+    const trialSub: SaasSubscriptionRecord = {
+      id: `sub-${schoolId}-${Date.now()}`,
+      school_id: schoolId,
+      plan_id: 'plan-professionnel',
+      plan_name: 'Professionnel',
+      status: 'trialing',
+      starts_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 jours
+      trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      created_at: new Date().toISOString()
+    };
+
+    setSubscriptions(prev => {
+      const filtered = prev.filter(s => s.school_id !== schoolId);
+      const updated = [...filtered, trialSub];
+      setLocalCache('saas_subscriptions', updated);
+      return updated;
+    });
+
+    return trialSub;
+  }, []);
+
   const renewSubscription = async (
     planId: string,
     paymentMethod: SaasPaymentRecord['payment_method'],
     txRef?: string
   ): Promise<{ success: boolean; message: string }> => {
-    const selectedPlan = plans.find(p => p.id === planId) || plans[1];
+    if (!currentSchool?.id) {
+      return { success: false, message: 'Aucune école sélectionnée.' };
+    }
+
+    const selectedPlan = plans.find(p => p.id === planId);
+    if (!selectedPlan) {
+      return { success: false, message: 'Forfait sélectionné invalide.' };
+    }
+
     const schoolId = currentSchool.id;
     const ref = txRef || `TX-SAAS-${Date.now().toString().slice(-6)}`;
+
+    // ✅ Vérifier l'existence d'un abonnement existant
+    const existingSub = subscriptions.find(s => s.school_id === schoolId);
+    const subId = existingSub?.id || `sub-${schoolId}-${Date.now()}`;
 
     const newPayment: SaasPaymentRecord = {
       id: `pay-${Date.now()}`,
       school_id: schoolId,
-      subscription_id: currentSubscription.id,
+      subscription_id: subId,
       amount: selectedPlan.price,
       currency: 'XOF',
       payment_method: paymentMethod,
@@ -162,11 +196,15 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setLocalCache('saas_payments', updatedPayments);
 
     const updatedSub: SaasSubscriptionRecord = {
-      ...currentSubscription,
+      id: subId,
+      school_id: schoolId,
       plan_id: selectedPlan.id,
       plan_name: selectedPlan.name,
       status: 'active',
-      expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+      starts_at: existingSub?.starts_at || new Date().toISOString(),
+      expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      trial_ends_at: existingSub?.trial_ends_at,
+      created_at: existingSub?.created_at || new Date().toISOString()
     };
 
     const updatedSubs = subscriptions.map(s => s.school_id === schoolId ? updatedSub : s);
@@ -185,12 +223,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const updateSubscriptionStatus = (schoolId: string, status: SaasSubscriptionRecord['status']) => {
-    const updatedSubs = subscriptions.map(s => {
-      if (s.school_id === schoolId) {
-        return { ...s, status };
-      }
-      return s;
-    });
+    const updatedSubs = subscriptions.map(s => 
+      s.school_id === schoolId ? { ...s, status } : s
+    );
     setSubscriptions(updatedSubs);
     setLocalCache('saas_subscriptions', updatedSubs);
   };
@@ -209,7 +244,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       payments,
       renewSubscription,
       updateSubscriptionStatus,
-      updateSchoolStatus
+      updateSchoolStatus,
+      createTrialSubscription, // ✅ Exposer la nouvelle méthode
     }}>
       {children}
     </SubscriptionContext.Provider>

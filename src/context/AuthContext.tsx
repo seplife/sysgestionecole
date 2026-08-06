@@ -16,7 +16,8 @@ interface AuthContextType {
   user: UserProfile | null;
   role: UserRole;
   isAuthenticated: boolean;
-  isLoading: boolean;
+  isInitializing: boolean; // ✅ RENOMMÉ pour plus de clarté
+  isLoading: boolean;       // ✅ Pour les opérations (login/logout)
   authError: string | null;
   isSuperAdmin: boolean;
   primarySchoolId: string | null;
@@ -26,8 +27,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
   updateUser: (fields: Partial<UserProfile>) => void;
-  setRole: (role: UserRole) => void;          // Conservé pour compatibilité UI
-  switchUserRole: (role: UserRole) => void;   // Conservé pour compatibilité UI
+  setRole: (role: UserRole) => void;
+  switchUserRole: (role: UserRole) => void;
   clearAuthError: () => void;
 }
 
@@ -42,7 +43,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [primarySchoolId, setPrimarySchoolId] = useState<string | null>(null);
   const [memberships, setMemberships] = useState<AuthSession['memberships']>([]);
-  const [isLoading, setIsLoading] = useState(true); // true au démarrage pendant vérification session
+  const [isInitializing, setIsInitializing] = useState(true); // ✅ Session initiale
+  const [isLoading, setIsLoading] = useState(false);           // ✅ Opérations
   const [authError, setAuthError] = useState<string | null>(null);
 
   // ── Appliquer une session complète dans le state ──────────
@@ -68,33 +70,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
 
     const initSession = async () => {
-      setIsLoading(true);
-      const session = await getCurrentSession();
-      if (mounted) {
-        applySession(session);
-        setIsLoading(false);
+      try {
+        const session = await getCurrentSession();
+        if (mounted) {
+          applySession(session);
+        }
+      } catch (error) {
+        console.error('[AuthContext] Session initialization error:', error);
+        if (mounted) {
+          applySession(null);
+        }
+      } finally {
+        if (mounted) {
+          setIsInitializing(false); // ✅ Initialisation terminée
+        }
       }
     };
 
     initSession();
 
-    // Écouter les changements de session Supabase Auth (refresh, logout, etc.)
+    // Écouter les changements de session Supabase Auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, supabaseSession) => {
         if (!mounted) return;
 
         if (event === 'SIGNED_OUT' || !supabaseSession) {
           applySession(null);
-          setIsLoading(false);
           return;
         }
 
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          setIsLoading(true);
           const session = await getCurrentSession();
           if (mounted) {
             applySession(session);
-            setIsLoading(false);
           }
         }
       }
@@ -107,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [applySession]);
 
   // ── LOGIN ─────────────────────────────────────────────────
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
     setAuthError(null);
     setIsLoading(true);
 
@@ -115,45 +123,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const result = await loginWithSupabase(email, password);
 
       if (!result.success) {
-        setAuthError(result.message || 'Connexion échouée.');
-        setIsLoading(false);
-        return { success: false, message: result.message };
+        const errorMessage = result.message || 'Connexion échouée.';
+        setAuthError(errorMessage);
+        return { success: false, message: errorMessage };
       }
 
       if (result.session) {
         applySession(result.session);
       }
-      setIsLoading(false);
+      
       return { success: true };
     } catch (e: any) {
-      const msg = 'Erreur inattendue lors de la connexion.';
+      const msg = e?.message || 'Erreur inattendue lors de la connexion.';
       setAuthError(msg);
-      setIsLoading(false);
       return { success: false, message: msg };
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // ── LOGOUT ────────────────────────────────────────────────
   const logout = async () => {
     setIsLoading(true);
-    await logoutFromSupabase();
-    applySession(null);
-    setIsLoading(false);
+    try {
+      await logoutFromSupabase();
+      applySession(null);
+    } catch (error) {
+      console.error('[AuthContext] Logout error:', error);
+      // Même en cas d'erreur, on nettoie le state local
+      applySession(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ── MISE À JOUR DU PROFIL (locale + Supabase) ─────────────
-  const updateUser = (fields: Partial<UserProfile>) => {
-    if (user) {
-      const updated = { ...user, ...fields };
-      setUser(updated);
-      // Sync vers Supabase (best-effort, sans bloquer l'UI)
-      supabase
+  const updateUser = async (fields: Partial<UserProfile>) => {
+    if (!user) return;
+
+    // ✅ Mise à jour optimiste
+    const updated = { ...user, ...fields };
+    setUser(updated);
+
+    // Sync vers Supabase (best-effort)
+    try {
+      const { error } = await supabase
         .from('user_profiles')
         .update(fields)
-        .eq('id', user.id)
-        .then(({ error }) => {
-          if (error) console.warn('[AuthContext] Profile update error:', error);
-        });
+        .eq('id', user.id);
+      
+      if (error) {
+        console.warn('[AuthContext] Profile update error:', error);
+        // Revert sur erreur ?
+      }
+    } catch (error) {
+      console.warn('[AuthContext] Profile update network error:', error);
     }
   };
 
@@ -170,12 +194,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearAuthError = () => setAuthError(null);
 
+  // ✅ isAuthenticated : indépendant de isInitializing
+  const isAuthenticated = !!user;
+
   return (
     <AuthContext.Provider
       value={{
         user,
         role,
-        isAuthenticated: !!user && !isLoading,
+        isAuthenticated,
+        isInitializing,
         isLoading,
         authError,
         isSuperAdmin,
@@ -204,6 +232,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-
-

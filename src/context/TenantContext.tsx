@@ -7,11 +7,6 @@ import { useAuth } from './AuthContext';
 
 // ─────────────────────────────────────────────────────────────
 // PRÉFÉRENCE UI : école courante sélectionnée (localStorage)
-// Ce n'est PAS une source de vérité pour un utilisateur standard —
-// uniquement une préférence UI valable pour le Super Admin, qui a
-// accès à plusieurs écoles et a besoin de mémoriser son choix.
-// Pour un utilisateur standard, la source de vérité est toujours
-// `primarySchoolId` (dérivé de la session / school_members côté serveur).
 // ─────────────────────────────────────────────────────────────
 const UI_CURRENT_SCHOOL_KEY = 'sysgestionecole_ui_current_school_id';
 
@@ -77,7 +72,7 @@ const EMPTY_SCHOOL: School = {
 };
 
 // ─────────────────────────────────────────────────────────────
-// ORGANISATION PAR DÉFAUT (structure SaaS — chargeable depuis Supabase ultérieurement)
+// ORGANISATION PAR DÉFAUT
 // ─────────────────────────────────────────────────────────────
 const DEFAULT_ORG: Organization = {
   id: '',
@@ -116,7 +111,7 @@ const TenantContext = createContext<TenantContextType | undefined>(undefined);
 // PROVIDER TENANT — SUPABASE RÉEL
 // ─────────────────────────────────────────────────────────────
 export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isSuperAdmin, primarySchoolId } = useAuth();
+  const { user, isAuthenticated, isSuperAdmin, primarySchoolId } = useAuth();
 
   const [schools, setSchools] = useState<School[]>([]);
   const [currentSchool, setCurrentSchoolState] = useState<School>(EMPTY_SCHOOL);
@@ -133,35 +128,44 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   // ── Charger les écoles depuis Supabase ───────────────────
-  // NOTE SÉCURITÉ : schoolService.getAll() doit impérativement utiliser
-  // le client Supabase "anon/authenticated" (jamais service_role) afin que
-  // les policies RLS de la table `schools` filtrent déjà le résultat :
-  //   - utilisateur standard  -> uniquement les écoles où il est membre actif
-  //   - super admin           -> toutes les écoles
-  // Le code ci-dessous suppose ce filtrage déjà appliqué côté serveur et
-  // ajoute une seconde barrière côté client par prudence (défense en profondeur).
   const loadSchools = useCallback(async () => {
-    if (!isAuthenticated) return;
+    // ✅ Vérification plus robuste
+    if (!isAuthenticated || !user) {
+      setSchools([]);
+      setCurrentSchoolState(EMPTY_SCHOOL);
+      return;
+    }
+
     setSchoolsLoading(true);
     setSchoolsError(null);
 
     try {
       const data = await schoolService.getAll();
-      setSchools(data);
+      
+      // ✅ Filtrage côté client par sécurité
+      let filteredData = data;
+      if (!isSuperAdmin) {
+        filteredData = data.filter(s => s.id === primarySchoolId);
+      }
+      
+      setSchools(filteredData);
 
-      if (data.length > 0) {
+      if (filteredData.length > 0) {
         const savedId = getSavedSchoolId();
-        const savedSchool = savedId ? data.find(s => s.id === savedId) : null;
+        const savedSchool = savedId ? filteredData.find(s => s.id === savedId) : null;
 
         const selected =
           savedSchool ||
-          data.find(s => s.id === primarySchoolId) ||
-          data[0];
+          filteredData.find(s => s.id === primarySchoolId) ||
+          filteredData[0];
 
         setCurrentSchoolState(selected);
         saveCurrentSchoolId(selected.id);
       } else {
         setCurrentSchoolState(EMPTY_SCHOOL);
+        if (!isSuperAdmin) {
+          setSchoolsError('Aucune école trouvée pour votre compte.');
+        }
       }
     } catch (e: any) {
       console.error('[TenantContext] loadSchools error:', e);
@@ -173,30 +177,33 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } finally {
       setSchoolsLoading(false);
     }
-  }, [isAuthenticated, primarySchoolId, isSuperAdmin]);
+  }, [isAuthenticated, user, primarySchoolId, isSuperAdmin]);
 
   // Charger les écoles à l'authentification
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
       loadSchools();
-    } else {
-      // Réinitialiser à la déconnexion
+    } else if (!isAuthenticated) {
+      // ✅ Nettoyage explicite à la déconnexion
       setSchools([]);
       setCurrentSchoolState(EMPTY_SCHOOL);
       setSchoolsError(null);
     }
-  }, [isAuthenticated, loadSchools]);
+  }, [isAuthenticated, user, loadSchools]);
 
   // ── Changer l'école courante (préférence UI) ─────────────
-  // Garde-fou : un utilisateur standard ne peut sélectionner que
-  // son école d'appartenance (primarySchoolId), même si un composant
-  // UI mal protégé tentait de lui proposer une autre école.
   const setCurrentSchool = (school: School) => {
+    // ✅ Garde-fou avec message explicite
+    if (!school?.id) {
+      console.warn('[TenantContext] Tentative de sélection d\'une école invalide.');
+      return;
+    }
+
     const isAllowed = isSuperAdmin || school.id === primarySchoolId;
 
     if (!isAllowed) {
       console.warn(
-        '[TenantContext] Tentative de sélection d\'une école non autorisée pour cet utilisateur.'
+        `[TenantContext] Accès refusé : l'utilisateur ${user?.id} tente d'accéder à l'école ${school.id} alors qu'il appartient à ${primarySchoolId}`
       );
       return;
     }
@@ -209,20 +216,16 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const updateCurrentSchool = async (updated: Partial<School>) => {
     if (!currentSchool.id) return;
 
-    // 1. Mise à jour optimiste du state React immédiat pour le Navbar et le reste de l'UI
-    const newSchool = { ...currentSchool, ...updated };
-    setCurrentSchoolState(newSchool);
-    setSchools(prev => prev.map(s => s.id === newSchool.id ? newSchool : s));
-
-    // 2. Mettre à jour le cache local / localStorage
     try {
+      // 1. Mise à jour optimiste
+      const newSchool = { ...currentSchool, ...updated };
+      setCurrentSchoolState(newSchool);
+      setSchools(prev => prev.map(s => s.id === newSchool.id ? newSchool : s));
+
+      // 2. Mettre à jour le cache local
       await supabaseService.updateSchoolConfig(currentSchool.id, updated);
-    } catch (err) {
-      console.warn('[TenantContext] updateSchoolConfig cache warning:', err);
-    }
 
-    // 3. Tenter la synchronisation Supabase
-    try {
+      // 3. Synchronisation Supabase
       const { id: _id, created_at: _ca, ...cleanUpdates } = updated as any;
       if (Object.keys(cleanUpdates).length > 0) {
         const result = await schoolService.update(currentSchool.id, cleanUpdates);
@@ -233,89 +236,90 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }
     } catch (e) {
-      console.warn('[TenantContext] Supabase update warning (state local conservé):', e);
+      console.error('[TenantContext] updateCurrentSchool error:', e);
+      // ✅ Relancer l'erreur pour que l'UI puisse afficher un message
+      throw e;
     }
   };
 
   // ── Mettre à jour une école par ID ───────────────────────
   const updateSchool = async (id: string, updated: Partial<School>) => {
-    // 1. Mise à jour optimiste
-    setSchools(prev => prev.map(s => s.id === id ? { ...s, ...updated } : s));
-    if (currentSchool.id === id) {
-      setCurrentSchoolState(prev => ({ ...prev, ...updated }));
-    }
-
-    // 2. Cache local
     try {
+      // 1. Mise à jour optimiste
+      setSchools(prev => prev.map(s => s.id === id ? { ...s, ...updated } : s));
+      if (currentSchool.id === id) {
+        setCurrentSchoolState(prev => ({ ...prev, ...updated }));
+      }
+
+      // 2. Cache local
       await supabaseService.updateSchoolConfig(id, updated);
-    } catch (err) {
-      console.warn('[TenantContext] updateSchoolConfig cache warning:', err);
-    }
 
-    // 3. Synchronisation Supabase
-    try {
+      // 3. Synchronisation Supabase
       const { id: _id, created_at: _ca, ...cleanUpdates } = updated as any;
-      const result = await schoolService.update(id, cleanUpdates);
-      if (result) {
-        setSchools(prev => prev.map(s => s.id === id ? { ...s, ...result } : s));
-        if (currentSchool.id === id) {
-          setCurrentSchoolState(prev => ({ ...prev, ...result }));
+      if (Object.keys(cleanUpdates).length > 0) {
+        const result = await schoolService.update(id, cleanUpdates);
+        if (result) {
+          setSchools(prev => prev.map(s => s.id === id ? { ...s, ...result } : s));
+          if (currentSchool.id === id) {
+            setCurrentSchoolState(prev => ({ ...prev, ...result }));
+          }
         }
       }
     } catch (e) {
-      console.warn('[TenantContext] Supabase update school warning:', e);
+      console.error('[TenantContext] updateSchool error:', e);
+      throw e;
     }
   };
 
   // ── Ajouter une école ────────────────────────────────────
-  // ✅ CORRECTION : l'ancienne vérification s'appuyait sur
-  // `(supabaseService as any).getUser` / `(supabaseService as any).client`,
-  // qui n'existent ni l'un ni l'autre sur `supabaseService` (voir
-  // services/supabaseService.ts — il utilise `supabase` en interne, sans
-  // exposer ni méthode `getUser`, ni propriété `client`). Le ternaire
-  // renvoyait donc systématiquement `undefined`, et l'erreur
-  // « Vous devez être connecté » était levée à chaque appel, même pour un
-  // utilisateur bel et bien authentifié.
-  //
-  // On utilise maintenant le client Supabase importé directement
-  // (le même que celui utilisé par AuthContext.tsx), avec `getSession()`
-  // plutôt que `getUser()` : `getSession()` lit la session depuis le
-  // storage local (rapide, pas d'aller-retour réseau), alors que
-  // `getUser()` revalide le token auprès du serveur à chaque appel, ce qui
-  // peut échouer/timeout inutilement sur un réseau lent (ex. dev local).
-  //
-  // On s'appuie aussi sur `isAuthenticated` (déjà résolu par AuthContext)
-  // comme première ligne de défense, avant même de solliciter Supabase.
-  const addNewSchool = async (school: School) => {
+  const addNewSchool = async (school: School): Promise<School> => {
+    // ✅ Vérification explicite de l'authentification
+    if (!isAuthenticated || !user) {
+      throw new Error('Vous devez être connecté pour créer une école');
+    }
+
     try {
-      // On lit directement la session Supabase (stockée localement, pas de réseau)
-      // plutôt que de s'appuyer sur `isAuthenticated` (état React asynchrone).
-      // Cela évite la race condition lors de l'onboarding : après un
-      // `signInWithPassword`, la session est immédiatement disponible dans
-      // le storage local, mais `onAuthStateChange` n'a pas encore re-rendu
-      // AuthContext, donc `isAuthenticated` peut encore valoir `false`.
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data?.session?.user) {
-        throw new Error('Vous devez être connecté pour créer une école');
+      // ✅ Vérifier la session Supabase
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !sessionData?.session?.user) {
+        throw new Error('Session expirée. Veuillez vous reconnecter.');
       }
 
+      // ✅ Créer l'école dans Supabase
       const created = await schoolService.create(school as any);
-      setSchools(prev => [created, ...prev.filter(s => s.id !== created.id)]);
+      
+      // ✅ Mettre à jour le state local
+      setSchools(prev => {
+        const exists = prev.some(s => s.id === created.id);
+        if (exists) {
+          return prev.map(s => s.id === created.id ? created : s);
+        }
+        return [created, ...prev];
+      });
+      
       setCurrentSchoolState(created);
       saveCurrentSchoolId(created.id);
+      
+      // ✅ Recharger pour synchroniser
       await loadSchools();
+      
       return created;
     } catch (e) {
       console.error('[TenantContext] addNewSchool error:', e);
-      // Relancer l'erreur pour que le composant appelant puisse la gérer
-      throw e;
+      throw e; // ✅ Relancer pour gestion par le composant
     }
   };
 
   // ── Supprimer une école ──────────────────────────────────
   const deleteSchool = async (id: string) => {
+    if (!isAuthenticated) {
+      throw new Error('Vous devez être connecté pour supprimer une école');
+    }
+
     try {
       await schoolService.delete(id);
+      
       const remaining = schools.filter(s => s.id !== id);
       setSchools(remaining);
 

@@ -10,7 +10,7 @@ import { UserRole } from '../../types/database';
 import { OnboardingWizardModule } from './OnboardingWizardModule';
 
 export const LoginModule: React.FC = () => {
-  const { login } = useAuth();
+  const { login, isInitializing } = useAuth(); // ✅ Utiliser isInitializing
   const { currentSchool, schools, setCurrentSchool } = useTenant();
 
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -43,6 +43,7 @@ export const LoginModule: React.FC = () => {
       if (!res.success) {
         setErrorMsg(res.message || 'Identifiants incorrects. Veuillez réessayer.');
       }
+      // ✅ Si succès, pas besoin de faire quoi que ce soit, le contexte gère la redirection
     } catch {
       setErrorMsg('Erreur lors de la connexion. Veuillez contacter l\'administration.');
     } finally {
@@ -55,12 +56,32 @@ export const LoginModule: React.FC = () => {
     setPassword(account.pass);
     setIsLoading(true);
     setErrorMsg(null);
+    
     try {
-      await login(account.email, account.pass);
+      const res = await login(account.email, account.pass);
+      if (!res.success) {
+        setErrorMsg(res.message || 'Échec de la connexion démo.');
+      }
+      // ✅ La gestion du succès est dans AuthContext
+    } catch (error) {
+      setErrorMsg('Erreur lors de la connexion démo.');
+      console.error('[LoginModule] Demo login error:', error);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // ✅ Afficher un loader pendant l'initialisation de la session
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-slate-400 text-sm">Chargement de votre session...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (showOnboarding) {
     return <OnboardingWizardModule onComplete={() => setShowOnboarding(false)} onCancel={() => setShowOnboarding(false)} />;
@@ -80,9 +101,13 @@ export const LoginModule: React.FC = () => {
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-500 to-indigo-600 p-0.5 shadow-lg shadow-brand-500/30 flex items-center justify-center">
                 <img 
-                  src={currentSchool.logo_url || '/images/logo-ecole.png'} 
+                  src={currentSchool?.logo_url || '/images/logo-ecole.png'} // ✅ Optional chaining
                   alt="Logo Établissement"
                   className="w-full h-full object-contain bg-slate-900 rounded-xl p-1" 
+                  onError={(e) => {
+                    // ✅ Fallback si l'image ne charge pas
+                    (e.target as HTMLImageElement).src = '/images/logo-ecole.png';
+                  }}
                 />
               </div>
               <div>
@@ -96,17 +121,19 @@ export const LoginModule: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 space-y-2">
-                <div className="flex items-center space-x-2 text-xs font-bold text-brand-400">
-                  <Building2 className="w-4 h-4" />
-                  <span>Établissement Sélectionné</span>
+              {currentSchool?.id && ( // ✅ Afficher uniquement si une école existe
+                <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 space-y-2">
+                  <div className="flex items-center space-x-2 text-xs font-bold text-brand-400">
+                    <Building2 className="w-4 h-4" />
+                    <span>Établissement Sélectionné</span>
+                  </div>
+                  <div className="text-sm font-extrabold text-white">{currentSchool.name}</div>
+                  <div className="text-xs text-slate-400 flex items-center justify-between">
+                    <span>Code MENA: <span className="font-mono text-brand-300 font-bold">{currentSchool.registration_number || 'N/A'}</span></span>
+                    <span>{currentSchool.city || 'N/A'}</span>
+                  </div>
                 </div>
-                <div className="text-sm font-extrabold text-white">{currentSchool.name}</div>
-                <div className="text-xs text-slate-400 flex items-center justify-between">
-                  <span>Code MENA: <span className="font-mono text-brand-300 font-bold">{currentSchool.registration_number}</span></span>
-                  <span>{currentSchool.city}</span>
-                </div>
-              </div>
+              )}
 
               {/* CTA Créer mon établissement */}
               <div className="bg-gradient-to-r from-brand-950 to-indigo-950 p-4 rounded-2xl border border-brand-500/30 space-y-2">
@@ -169,24 +196,26 @@ export const LoginModule: React.FC = () => {
           )}
 
           <form onSubmit={handleLogin} className="space-y-4 text-xs">
-            {/* School Selector Dropdown on Login */}
-            <div>
-              <label className="block font-bold text-slate-300 mb-1">Établissement / École Client</label>
-              <select
-                value={currentSchool.id}
-                onChange={(e) => {
-                  const selected = schools.find(s => s.id === e.target.value);
-                  if (selected) setCurrentSchool(selected);
-                }}
-                className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 font-bold focus:border-brand-500 outline-none"
-              >
-                {schools.map((sch) => (
-                  <option key={sch.id} value={sch.id}>
-                    {sch.name} ({sch.city})
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* School Selector Dropdown */}
+            {schools.length > 0 && ( // ✅ Masquer si pas d'écoles
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Établissement / École Client</label>
+                <select
+                  value={currentSchool?.id || ''}
+                  onChange={(e) => {
+                    const selected = schools.find(s => s.id === e.target.value);
+                    if (selected) setCurrentSchool(selected);
+                  }}
+                  className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 font-bold focus:border-brand-500 outline-none"
+                >
+                  {schools.map((sch) => (
+                    <option key={sch.id} value={sch.id}>
+                      {sch.name} ({sch.city || 'N/A'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Username / Email Field */}
             <div>
@@ -240,16 +269,20 @@ export const LoginModule: React.FC = () => {
                 <span className="text-slate-400 text-xs">Rester connecté</span>
               </label>
 
-              <a href="#forgot" onClick={(e) => { e.preventDefault(); alert("Pour réinitialiser votre mot de passe, veuillez contacter l'administrateur de votre établissement."); }} className="text-xs text-brand-400 hover:underline">
+              <button
+                type="button"
+                onClick={() => alert("Pour réinitialiser votre mot de passe, veuillez contacter l'administrateur de votre établissement.")}
+                className="text-xs text-brand-400 hover:underline"
+              >
                 Mot de passe oublié ?
-              </a>
+              </button>
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-brand-500/25 transition-all flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-brand-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -273,7 +306,8 @@ export const LoginModule: React.FC = () => {
                 <button
                   key={acc.role}
                   onClick={() => handleQuickDemoLogin(acc)}
-                  className="p-2 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/70 hover:border-brand-500/50 rounded-xl text-left transition-all group"
+                  disabled={isLoading} // ✅ Désactiver pendant le chargement
+                  className="p-2 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/70 hover:border-brand-500/50 rounded-xl text-left transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <div className="font-bold text-slate-200 group-hover:text-brand-300 flex items-center gap-1">
                     <span>{acc.icon}</span>
