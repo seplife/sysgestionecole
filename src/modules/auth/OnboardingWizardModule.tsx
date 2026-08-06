@@ -237,30 +237,21 @@ const handleFinalActivation = async () => {
           // Vérifier si la session est directement disponible
           if (signUpData.session?.user) {
             session = signUpData.session;
-            console.log('✅ Session disponible immédiatement');
+            console.log('✅ Session disponible immédiatement (confirmation email désactivée)');
           } else {
-            // La session n'est pas disponible tout de suite
-            // ➜ On doit se connecter explicitement
-            console.log('⏳ Session non disponible, connexion explicite...');
-            
-            // Attendre un peu pour que le compte soit bien enregistré
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            });
-
-            if (loginError || !loginData.session?.user) {
-              console.error('❌ Échec connexion après création:', loginError);
-              throw new Error(
-                'Compte créé mais connexion impossible. ' +
-                'Si la confirmation email est activée, veuillez vérifier votre boîte mail.'
-              );
-            }
-            
-            session = loginData.session;
-            console.log('✅ Connexion réussie après création');
+            // ✅ La session n'est pas disponible : confirmation email requise par Supabase
+            // Il ne faut PAS tenter signInWithPassword ici, car cela échouerait avec
+            // "Email not confirmed". L'utilisateur doit d'abord cliquer sur le lien
+            // de confirmation dans sa boîte mail.
+            console.log('📧 Email de confirmation envoyé. L\'utilisateur doit confirmer son adresse.');
+            setIsSubmitting(false);
+            setErrorMsg(
+              '✅ Compte créé avec succès ! Un e-mail de confirmation a été envoyé à ' +
+              email +
+              '. Veuillez cliquer sur le lien dans votre boîte mail avant de vous connecter.'
+            );
+            // On arrête ici — l'utilisateur doit confirmer son email d'abord
+            return;
           }
         } else {
           // Autre erreur inattendue

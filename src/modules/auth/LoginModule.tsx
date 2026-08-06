@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { 
   Lock, User, Eye, EyeOff, ShieldCheck, School as SchoolIcon, 
-  Sparkles, CheckCircle2, ArrowRight, AlertCircle, KeyRound, Building2
+  Sparkles, CheckCircle2, ArrowRight, AlertCircle, KeyRound, Building2, Mail, RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { UserRole } from '../../types/database';
+import { supabase } from '../../lib/supabase';
 
 import { OnboardingWizardModule } from './OnboardingWizardModule';
 
@@ -19,6 +20,9 @@ export const LoginModule: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isEmailUnconfirmed, setIsEmailUnconfirmed] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const demoAccounts = [
@@ -31,6 +35,8 @@ export const LoginModule: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setIsEmailUnconfirmed(false);
+    setResendSuccess(false);
 
     if (!username.trim() || !password) {
       setErrorMsg('Veuillez renseigner votre identifiant et votre mot de passe.');
@@ -41,13 +47,44 @@ export const LoginModule: React.FC = () => {
     try {
       const res = await login(username, password);
       if (!res.success) {
-        setErrorMsg(res.message || 'Identifiants incorrects. Veuillez réessayer.');
+        const msg = res.message || 'Identifiants incorrects. Veuillez réessayer.';
+        // Détecter spécifiquement l'erreur "email non confirmé"
+        if (msg.toLowerCase().includes('confirmée') || msg.toLowerCase().includes('boite mail')) {
+          setIsEmailUnconfirmed(true);
+        }
+        setErrorMsg(msg);
       }
-      // ✅ Si succès, pas besoin de faire quoi que ce soit, le contexte gère la redirection
     } catch {
       setErrorMsg('Erreur lors de la connexion. Veuillez contacter l\'administration.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Renvoyer l'email de confirmation
+  const handleResendConfirmation = async () => {
+    if (!username.trim()) {
+      setErrorMsg('Veuillez saisir votre adresse e-mail pour renvoyer la confirmation.');
+      return;
+    }
+    setResendLoading(true);
+    setResendSuccess(false);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: username.trim().toLowerCase(),
+      });
+      if (error) {
+        setErrorMsg(`Erreur lors du renvoi : ${error.message}`);
+      } else {
+        setResendSuccess(true);
+        setErrorMsg(null);
+        setIsEmailUnconfirmed(false);
+      }
+    } catch (e: any) {
+      setErrorMsg('Impossible d\'envoyer l\'email. Vérifiez votre connexion réseau.');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -188,10 +225,34 @@ export const LoginModule: React.FC = () => {
             <p className="text-xs text-slate-400 mt-1">Saisissez votre nom d'utilisateur / e-mail et votre mot de passe pour accéder à votre espace.</p>
           </div>
 
+          {resendSuccess && (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl text-xs text-emerald-300 flex items-start gap-2 animate-fadeIn">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <span>E-mail de confirmation renvoyé avec succès ! Vérifiez votre boîte de réception (et les spams).</span>
+            </div>
+          )}
+
           {errorMsg && (
-            <div className="bg-rose-500/10 border border-rose-500/30 p-3 rounded-xl text-xs text-rose-300 flex items-start gap-2 animate-fadeIn">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
+            <div className="bg-rose-500/10 border border-rose-500/30 p-3 rounded-xl text-xs text-rose-300 flex flex-col gap-2 animate-fadeIn">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
+              {isEmailUnconfirmed && (
+                <button
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  disabled={resendLoading}
+                  className="flex items-center justify-center gap-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold py-2 px-3 rounded-lg transition-all text-[11px] disabled:opacity-50"
+                >
+                  {resendLoading ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Mail className="w-3.5 h-3.5" />
+                  )}
+                  Renvoyer l'e-mail de confirmation
+                </button>
+              )}
             </div>
           )}
 

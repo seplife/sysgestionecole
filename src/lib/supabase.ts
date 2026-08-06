@@ -2,8 +2,15 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = "https://nubnovhdpwblhwsamxtb.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im51Ym5vdmhkcHdibGh3c2FteHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNDMwOTYsImV4cCI6MjEwMDkxOTA5Nn0.D5ZBkq7dk7tusBDd1ZnL9dCmXFS0JElLQNRR42SSCJk";
+// ✅ Lecture depuis les variables d'environnement Vite (.env)
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error(
+    '[Supabase] ⚠️ VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY non définis dans le fichier .env !'
+  );
+}
 
 // Configuration spécifique pour le développement local
 const isLocalDev = window.location.protocol === 'http:' && 
