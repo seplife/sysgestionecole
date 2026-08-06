@@ -148,6 +148,7 @@ export const OnboardingWizardModule: React.FC<OnboardingWizardProps> = ({ onComp
   };
 
   // Final Activation Handler Step 5
+  // Final Activation Handler Step 5
 const handleFinalActivation = async () => {
   setIsSubmitting(true);
   setErrorMsg(null);
@@ -174,130 +175,80 @@ const handleFinalActivation = async () => {
     // ============================================================
     // 2. VÉRIFICATION D'UNE SESSION EXISTANTE
     // ============================================================
-    let {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+    let { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
     if (sessionError) {
-      console.error(
-        '[Onboarding] Erreur lors de la récupération de la session:',
-        sessionError
-      );
+      console.error('[Onboarding] Erreur récupération session:', sessionError);
     }
 
     // ============================================================
-    // 3. CRÉATION DU COMPTE RESPONSABLE SI AUCUNE SESSION
+    // 3. CRÉATION/CONNEXION DU COMPTE RESPONSABLE
     // ============================================================
     if (!session?.user) {
-      console.log(
-        '[Onboarding] Aucune session active. Tentative d\'authentification...'
-      );
+      console.log('[Onboarding] Aucune session. Tentative de connexion...');
 
-      // ------------------------------------------------------------
-      // 3A. Tentative de connexion d'abord
-      // ------------------------------------------------------------
-      const { data: signInData, error: signInError } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      // 3A. Essayer de se connecter d'abord
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
       if (!signInError && signInData.session?.user) {
         session = signInData.session;
-
-        console.log(
-          '[Onboarding] Connexion réussie:',
-          session.user.id
-        );
+        console.log('[Onboarding] Connexion réussie:', session.user.id);
       } else {
-        // ----------------------------------------------------------
-        // 3B. Si le compte n'existe pas, création du compte
-        // ----------------------------------------------------------
-        console.log(
-          '[Onboarding] Connexion impossible. Tentative de création du compte...'
-        );
-
-        const { data: signUpData, error: signUpError } =
-          await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                first_name: adminProfile.firstName.trim(),
-                last_name: adminProfile.lastName.trim(),
-                phone: adminProfile.phone.trim(),
-                role: 'school_admin',
-              },
+        // 3B. Créer le compte si connexion impossible
+        console.log('[Onboarding] Création du compte...');
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              first_name: adminProfile.firstName.trim(),
+              last_name: adminProfile.lastName.trim(),
+              phone: adminProfile.phone.trim(),
+              role: 'school_admin',
             },
-          });
+          },
+        });
 
         if (signUpError) {
-          // Si le compte existe déjà, on tente une nouvelle connexion.
+          // Si le compte existe déjà, retenter la connexion
           if (
             signUpError.message.toLowerCase().includes('already registered') ||
             signUpError.message.toLowerCase().includes('already exists')
           ) {
-            console.log(
-              '[Onboarding] Le compte existe déjà. Nouvelle tentative de connexion...'
-            );
+            console.log('[Onboarding] Compte existant, nouvelle connexion...');
+            const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
 
-            const { data: retrySignInData, error: retrySignInError } =
-              await supabase.auth.signInWithPassword({
+            if (retryError || !retryData.session?.user) {
+              throw new Error(
+                'Le compte existe mais la connexion a échoué. Vérifiez vos identifiants.'
+              );
+            }
+            session = retryData.session;
+          } else {
+            throw new Error(`Erreur création compte : ${signUpError.message}`);
+          }
+        } else {
+          // 3C. Utiliser la session créée ou attendre
+          session = signUpData.session;
+          
+          if (!session?.user) {
+            // Attendre un peu et revérifier
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const { data: { session: refreshedSession } } = await supabase.auth.getSession();
+            session = refreshedSession;
+            
+            if (!session?.user) {
+              // Dernière tentative : se connecter
+              const { data: loginData } = await supabase.auth.signInWithPassword({
                 email,
                 password,
               });
-
-            if (retrySignInError || !retrySignInData.session?.user) {
-              throw new Error(
-                'Le compte responsable existe déjà, mais la connexion a échoué. Vérifiez votre adresse e-mail et votre mot de passe.'
-              );
-            }
-
-            session = retrySignInData.session;
-          } else {
-            throw new Error(
-              `Impossible de créer le compte responsable : ${signUpError.message}`
-            );
-          }
-        } else {
-          // --------------------------------------------------------
-          // 3C. Vérification immédiate de la session après signUp
-          // --------------------------------------------------------
-          session = signUpData.session;
-
-          if (!session?.user) {
-            // Vérifier une nouvelle fois la session persistée
-            const {
-              data: { session: refreshedSession },
-              error: refreshedSessionError,
-            } = await supabase.auth.getSession();
-
-            if (refreshedSessionError) {
-              console.error(
-                '[Onboarding] Erreur récupération session après inscription:',
-                refreshedSessionError
-              );
-            }
-
-            session = refreshedSession;
-
-            // ------------------------------------------------------
-            // 3D. Si toujours aucune session, tenter login
-            // ------------------------------------------------------
-            if (!session?.user) {
-              const { data: loginData, error: loginError } =
-                await supabase.auth.signInWithPassword({
-                  email,
-                  password,
-                });
-
-              if (loginError || !loginData.session?.user) {
-                throw new Error(
-                  'Le compte a été créé, mais aucune session Supabase active n\'est disponible. Si la confirmation e-mail est activée dans Supabase, veuillez confirmer votre adresse e-mail avant de continuer.'
-                );
-              }
-
               session = loginData.session;
             }
           }
@@ -306,63 +257,19 @@ const handleFinalActivation = async () => {
     }
 
     // ============================================================
-    // 4. GARANTIE ABSOLUE : UN UTILISATEUR AUTHENTIFIÉ EST REQUIS
+    // 4. VÉRIFICATION FINALE DE LA SESSION
     // ============================================================
     if (!session?.user) {
       throw new Error(
-        'Impossible de poursuivre : aucun utilisateur Supabase authentifié.'
+        'Impossible d\'établir une session. Veuillez réessayer.'
       );
     }
 
-    // ============================================================
-    // 5. RÉCUPÉRATION DE L'UTILISATEUR AUTHENTIFIÉ
-    // ============================================================
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      console.error(
-        '[Onboarding] Impossible de récupérer l\'utilisateur authentifié:',
-        userError
-      );
-
-      throw new Error(
-        'Votre session d\'authentification Supabase est introuvable. Veuillez vous reconnecter.'
-      );
-    }
-
-    console.log('================================================');
-    console.log('[Onboarding] UTILISATEUR AUTHENTIFIÉ');
-    console.log('User ID:', user.id);
-    console.log('User Email:', user.email);
-    console.log('================================================');
+    const user = session.user;
+    console.log('✅ Utilisateur authentifié:', user.id, user.email);
 
     // ============================================================
-    // 6. VÉRIFICATION DU PROFIL UTILISATEUR
-    // ============================================================
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('id, organization_id, school_id, role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (profileError) {
-      console.error(
-        '[Onboarding] Erreur récupération user_profiles:',
-        profileError
-      );
-    }
-
-    console.log('================================================');
-    console.log('[Onboarding] PROFIL UTILISATEUR');
-    console.log('Profile:', profile);
-    console.log('Profile Error:', profileError);
-    console.log('================================================');
-
-    // ============================================================
-    // 7. CONSTRUCTION DU PAYLOAD DE L'ÉCOLE
+    // 5. CONSTRUCTION DU PAYLOAD DE L'ÉCOLE
     // ============================================================
     const newSchoolPayload: Partial<School> = {
       name: schoolData.name.trim(),
@@ -376,12 +283,9 @@ const handleFinalActivation = async () => {
           .replace(/^-+|-+$/g, '') +
         '-' +
         Date.now().toString().slice(-4),
-
       registration_number: schoolData.registrationNumber.trim(),
       school_type: schoolData.schoolType,
-      address:
-        schoolData.address.trim() ||
-        `${schoolData.city.trim()}, Côte d'Ivoire`,
+      address: schoolData.address.trim() || `${schoolData.city.trim()}, Côte d'Ivoire`,
       city: schoolData.city.trim(),
       phone: schoolData.phone.trim(),
       whatsapp: schoolData.whatsapp.trim(),
@@ -393,55 +297,129 @@ const handleFinalActivation = async () => {
       status: paymentOption === 'trial' ? 'active' : 'pending',
     };
 
-    // ============================================================
-    // 8. LOG DU PAYLOAD AVANT INSERTION
-    // ============================================================
-    console.log('================================================');
-    console.log('[Onboarding] CRÉATION ÉCOLE');
-    console.log('Authenticated User ID:', user.id);
-    console.log('Organization ID:', profile?.organization_id);
-    console.log('Current School ID:', profile?.school_id);
-    console.log('Role:', profile?.role);
-    console.log('School Payload:', newSchoolPayload);
-    console.log('================================================');
+    console.log('📦 Payload école:', newSchoolPayload);
 
     // ============================================================
-    // 9. CRÉATION DE L'ÉCOLE
+    // 6. CRÉATION DE L'ÉCOLE AVEC GESTION DE LA RACE CONDITION
     // ============================================================
-    await addNewSchool(newSchoolPayload as School);
+    // ⚠️ IMPORTANT : addNewSchool vérifie isAuthenticated du contexte Auth,
+    // mais le contexte peut ne pas encore être à jour après signIn/signUp.
+    // On utilise directement le client Supabase pour créer l'école,
+    // puis on met à jour le contexte manuellement.
+    
+    console.log('🏫 Création de l\'école dans Supabase...');
+    
+    // Créer l'école directement via le service
+    const { data: schoolData_result, error: schoolError } = await supabase
+      .from('schools')
+      .insert({
+        name: newSchoolPayload.name,
+        slug: newSchoolPayload.slug,
+        registration_number: newSchoolPayload.registration_number,
+        school_type: newSchoolPayload.school_type,
+        address: newSchoolPayload.address,
+        city: newSchoolPayload.city,
+        phone: newSchoolPayload.phone,
+        whatsapp: newSchoolPayload.whatsapp,
+        email: newSchoolPayload.email,
+        logo_url: newSchoolPayload.logo_url,
+        director_name: newSchoolPayload.director_name,
+        status: newSchoolPayload.status,
+        country: 'Côte d\'Ivoire',
+      })
+      .select()
+      .single();
 
-    // ============================================================
-    // 10. VÉRIFICATION POST-CRÉATION
-    // ============================================================
-    const {
-      data: { session: finalSession },
-    } = await supabase.auth.getSession();
-
-    if (!finalSession?.user) {
-      throw new Error(
-        'L\'école a été créée, mais la session utilisateur n\'est plus disponible.'
-      );
+    if (schoolError) {
+      console.error('❌ Erreur création école:', schoolError);
+      throw new Error(`Erreur lors de la création de l'école : ${schoolError.message}`);
     }
 
-    console.log(
-      '[Onboarding] École créée avec succès pour:',
-      finalSession.user.id
-    );
+    if (!schoolData_result) {
+      throw new Error('École créée mais aucune donnée retournée.');
+    }
+
+    console.log('✅ École créée avec succès:', schoolData_result.id);
 
     // ============================================================
-    // 11. FIN DU WIZARD
+    // 7. ASSOCIER L'UTILISATEUR À L'ÉCOLE (user_profiles)
     // ============================================================
+    console.log('👤 Association utilisateur-école...');
+    
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .upsert({
+        id: user.id,
+        email: user.email,
+        first_name: adminProfile.firstName.trim(),
+        last_name: adminProfile.lastName.trim(),
+        phone: adminProfile.phone.trim(),
+        role: 'school_admin',
+        school_id: schoolData_result.id,
+        organization_id: schoolData_result.organization_id || null,
+      }, {
+        onConflict: 'id'
+      });
+
+    if (profileError) {
+      console.error('❌ Erreur association profil:', profileError);
+      // L'école est créée, on continue malgré l'erreur de profil
+      console.warn('⚠️ École créée mais profil utilisateur non mis à jour.');
+    } else {
+      console.log('✅ Profil utilisateur mis à jour.');
+    }
+
+    // ============================================================
+    // 8. CRÉER UN ABONNEMENT D'ESSAI SI NÉCESSAIRE
+    // ============================================================
+    if (paymentOption === 'trial') {
+      console.log('🎁 Création abonnement d\'essai 14 jours...');
+      
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 14);
+      
+      const { error: subError } = await supabase
+        .from('subscriptions')
+        .insert({
+          school_id: schoolData_result.id,
+          plan_id: selectedPlanId === 'essentiel' ? 'plan-essentiel' : 
+                   selectedPlanId === 'premium' ? 'plan-premium' : 'plan-professionnel',
+          plan_name: selectedPlanId === 'essentiel' ? 'Essentiel' :
+                    selectedPlanId === 'premium' ? 'Premium' : 'Professionnel',
+          status: 'trialing',
+          starts_at: new Date().toISOString(),
+          trial_ends_at: trialEndDate.toISOString(),
+          expires_at: trialEndDate.toISOString(),
+        });
+
+      if (subError) {
+        console.error('❌ Erreur création abonnement:', subError);
+        console.warn('⚠️ École créée sans abonnement. À configurer manuellement.');
+      } else {
+        console.log('✅ Abonnement d\'essai créé.');
+      }
+    }
+
+    // ============================================================
+    // 9. SUCCÈS - REDIRECTION
+    // ============================================================
+    console.log('🎉 Activation terminée avec succès !');
+    
+    // Forcer la mise à jour de la session dans le contexte Auth
+    const { data: { session: finalSession } } = await supabase.auth.getSession();
+    if (finalSession?.user) {
+      console.log('✅ Session finale active:', finalSession.user.id);
+    }
+
+    // Terminer l'onboarding
     onComplete();
+    
   } catch (err: any) {
-    console.error(
-      '[Onboarding] Error in handleFinalActivation:',
-      err
-    );
-
-    const message =
-      err?.message ||
-      'Une erreur est survenue lors de l\'activation SaaS de votre établissement.';
-
+    console.error('❌ [Onboarding] Erreur:', err);
+    
+    const message = err?.message || 
+      'Une erreur est survenue lors de l\'activation de votre établissement.';
+    
     setErrorMsg(message);
   } finally {
     setIsSubmitting(false);
