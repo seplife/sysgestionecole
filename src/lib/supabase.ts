@@ -12,6 +12,10 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   );
 }
 
+console.log("URL =", SUPABASE_URL);
+console.log("KEY =", SUPABASE_ANON_KEY?.substring(0, 20));
+
+
 // Configuration spécifique pour le développement local
 const isLocalDev = window.location.protocol === 'http:' && 
                    (window.location.hostname === 'localhost' || 
