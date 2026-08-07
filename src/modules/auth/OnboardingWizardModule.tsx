@@ -369,11 +369,36 @@ export const OnboardingWizardModule: React.FC<OnboardingWizardProps> = ({ onComp
           })
           .select().single();
 
-        if (schoolError) {
+        // ── Détection erreur RLS (migration 013 non appliquée) ──
+        const isRlsError = schoolError && (
+          schoolError.code === '42501' ||
+          schoolError.code === 'PGRST301' ||
+          (schoolError.message || '').toLowerCase().includes('row-level security') ||
+          (schoolError.message || '').toLowerCase().includes('violates row-level')
+        );
+
+        if (schoolError && !isRlsError) {
           if (schoolError.code === '23505') throw new Error('Une école avec ce matricule existe déjà.');
           throw new Error(`Erreur création école : ${schoolError.message}`);
         }
 
+        if (isRlsError) {
+          // ── Fallback : Mode local avec sauvegarde pour sync ultérieure ──
+          console.warn('⚠️ RLS bloque la création de l\'école (migration 013 non appliquée). Bascule en mode local...');
+          activateLocalMode();
+          // Sauvegarder les credentials Supabase pour sync future
+          try {
+            localStorage.setItem('ivoireecole_supabase_uid', user.id);
+            localStorage.setItem('ivoireecole_supabase_email', user.email || email);
+            localStorage.setItem('ivoireecole_pending_sync_reason', 'rls_migration_013_missing');
+          } catch { /* ignore */ }
+          console.log('✅ Mode local activé. Données sauvegardées pour sync ultérieure.');
+          await new Promise(r => setTimeout(r, 500));
+          onComplete();
+          return;
+        }
+
+        // ── Création réussie sur Supabase ──
         // Profil utilisateur
         await supabase.from('user_profiles').upsert({
           id: user.id, email: user.email,
@@ -381,8 +406,8 @@ export const OnboardingWizardModule: React.FC<OnboardingWizardProps> = ({ onComp
           last_name: adminProfile.lastName.trim(),
           phone: adminProfile.phone.trim(),
           role: 'school_admin',
-          school_id: schoolResult.id,
-          organization_id: schoolResult.organization_id || null,
+          school_id: schoolResult!.id,
+          organization_id: schoolResult!.organization_id || null,
         }, { onConflict: 'id' });
 
         // Abonnement essai
@@ -393,7 +418,7 @@ export const OnboardingWizardModule: React.FC<OnboardingWizardProps> = ({ onComp
           const planName = selectedPlanId === 'essentiel' ? 'Essentiel'
             : selectedPlanId === 'premium' ? 'Premium' : 'Professionnel';
           await supabase.from('subscriptions').insert({
-            school_id: schoolResult.id, plan_id: planId, plan_name: planName,
+            school_id: schoolResult!.id, plan_id: planId, plan_name: planName,
             status: 'trialing', starts_at: new Date().toISOString(),
             trial_ends_at: trialEnd.toISOString(), expires_at: trialEnd.toISOString(),
           });
@@ -404,6 +429,7 @@ export const OnboardingWizardModule: React.FC<OnboardingWizardProps> = ({ onComp
         onComplete();
         return;
       }
+
 
       // ── 3B. SUPABASE INACCESSIBLE → MODE LOCAL ────────────
       console.warn('⚠️ Supabase inaccessible. Basculement en mode local...');
