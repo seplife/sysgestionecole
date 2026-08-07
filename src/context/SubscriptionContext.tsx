@@ -214,7 +214,12 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setSubscriptions(updatedSubs);
     setLocalCache('saas_subscriptions', updatedSubs);
 
-    updateSchoolStatus(schoolId, 'active');
+    // ✅ Protection contre les erreurs Supabase (RLS, réseau) — la souscription locale est déjà sauvegardée
+    try {
+      await updateSchoolStatus(schoolId, 'active');
+    } catch (schoolUpdateErr) {
+      console.warn('[SubscriptionContext] updateSchoolStatus a échoué (non bloquant):', schoolUpdateErr);
+    }
 
     return {
       success: true,
@@ -230,8 +235,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setLocalCache('saas_subscriptions', updatedSubs);
   };
 
-  const updateSchoolStatus = (schoolId: string, status: 'pending' | 'active' | 'suspended' | 'blocked' | 'cancelled') => {
-    updateSchool(schoolId, { status });
+  const updateSchoolStatus = async (schoolId: string, status: 'pending' | 'active' | 'suspended' | 'blocked' | 'cancelled') => {
+    await updateSchool(schoolId, { status });
   };
 
   return (

@@ -16,14 +16,25 @@ export const AccessStatusScreen: React.FC<AccessStatusScreenProps> = ({ accessCh
   const [paymentMethod, setPaymentMethod] = useState<SaasPaymentRecord['payment_method']>('wave');
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleRenew = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
-    const result = await renewSubscription(selectedPlanId, paymentMethod);
-    setIsProcessing(false);
-    if (result.success) {
-      setSuccessMsg(result.message);
+    setErrorMsg(null);
+    try {
+      const result = await renewSubscription(selectedPlanId, paymentMethod);
+      setIsProcessing(false);
+      if (result.success) {
+        setSuccessMsg(result.message);
+        // Recharger la page après 1.5s pour actualiser l'état d'accès
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        setErrorMsg(result.message || 'Une erreur est survenue. Réessayez.');
+      }
+    } catch (err: any) {
+      setIsProcessing(false);
+      setErrorMsg(err?.message || 'Erreur inattendue. Veuillez réessayer.');
     }
   };
 
@@ -206,6 +217,13 @@ export const AccessStatusScreen: React.FC<AccessStatusScreenProps> = ({ accessCh
                 </div>
               </div>
 
+              {errorMsg && (
+                <div className="flex items-center gap-2 bg-red-950/60 border border-red-500/40 text-red-300 text-xs px-4 py-3 rounded-xl animate-fadeIn">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between border-t border-slate-800 pt-6">
                 <div className="text-xs text-slate-400">
                   Confirmation sécurisée backend RLS & API Webhook Mobile Money CI
@@ -213,11 +231,20 @@ export const AccessStatusScreen: React.FC<AccessStatusScreenProps> = ({ accessCh
 
                 <button
                   type="submit"
-                  disabled={isProcessing}
-                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold px-6 py-3 rounded-2xl text-xs flex items-center gap-2 shadow-xl transition-all"
+                  disabled={isProcessing || !selectedPlanId}
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold px-6 py-3 rounded-2xl text-xs flex items-center gap-2 shadow-xl transition-all"
                 >
-                  <CreditCard className="w-4 h-4" />
-                  <span>{isProcessing ? 'Validation...' : 'Souscrire & Activer l\'Abonnement'}</span>
+                  {isProcessing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Activation en cours...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4" />
+                      <span>Souscrire &amp; Activer l&apos;Abonnement</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
