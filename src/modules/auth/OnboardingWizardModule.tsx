@@ -352,79 +352,114 @@ export const OnboardingWizardModule: React.FC<OnboardingWizardProps> = ({ onComp
             .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') +
           '-' + Date.now().toString().slice(-4);
 
-        const { data: schoolResult, error: schoolError } = await supabase
-          .from('schools')
-          .insert({
-            name: schoolData.name.trim(), slug,
-            registration_number: schoolData.registrationNumber.trim(),
-            school_type: schoolData.schoolType,
-            address: schoolData.address.trim() || `${schoolData.city.trim()}, Côte d'Ivoire`,
-            city: schoolData.city.trim(),
-            phone: schoolData.phone.trim(), whatsapp: schoolData.whatsapp.trim(),
-            email: schoolData.email.trim().toLowerCase(),
-            logo_url: schoolData.logoUrl,
-            director_name: schoolData.directorName.trim() || `${adminProfile.lastName.trim()} ${adminProfile.firstName.trim()}`,
-            status: paymentOption === 'trial' ? 'active' : 'pending',
-            country: "Côte d'Ivoire",
-          })
-          .select().single();
+        const schoolPayload = {
+          name: schoolData.name.trim(),
+          slug,
+          registration_number: schoolData.registrationNumber.trim(),
+          school_type: schoolData.schoolType,
+          address: schoolData.address.trim() || `${schoolData.city.trim()}, Cote d'Ivoire`,
+          city: schoolData.city.trim(),
+          phone: schoolData.phone.trim(),
+          whatsapp: schoolData.whatsapp.trim(),
+          email: schoolData.email.trim().toLowerCase(),
+          logo_url: schoolData.logoUrl,
+          director_name: schoolData.directorName.trim() || `${adminProfile.lastName.trim()} ${adminProfile.firstName.trim()}`,
+          status: paymentOption === 'trial' ? 'active' : 'pending',
+          country: "Cote d'Ivoire",
+        };
 
-        // ── Détection erreur RLS (migration 013 non appliquée) ──
-        const isRlsError = schoolError && (
-          schoolError.code === '42501' ||
-          schoolError.code === 'PGRST301' ||
-          (schoolError.message || '').toLowerCase().includes('row-level security') ||
-          (schoolError.message || '').toLowerCase().includes('violates row-level')
-        );
+        let schoolResult: any = null;
 
-        if (schoolError && !isRlsError) {
-          if (schoolError.code === '23505') throw new Error('Une école avec ce matricule existe déjà.');
-          throw new Error(`Erreur création école : ${schoolError.message}`);
+        // STRATEGIE 1 : RPC SECURITY DEFINER (contourne RLS)
+        console.log('Tentative creation ecole via RPC...');
+        const { data: rpcSchoolData, error: rpcSchoolError } = await supabase
+          .rpc('create_school_with_member', { p_school_data: schoolPayload });
+
+        if (!rpcSchoolError && rpcSchoolData) {
+          schoolResult = typeof rpcSchoolData === 'string' ? JSON.parse(rpcSchoolData) : rpcSchoolData;
+          console.log('Ecole creee via RPC:', schoolResult?.id);
+        } else {
+          if (rpcSchoolError) {
+            console.warn('RPC echouee:', rpcSchoolError.message, '- Tentative insert direct...');
+          }
+
+          // STRATEGIE 2 : INSERT DIRECT
+          const { data: insertSchoolData, error: insertSchoolError } = await supabase
+            .from('schools')
+            .insert(schoolPayload)
+            .select()
+            .single();
+
+          if (insertSchoolError) {
+            const isRlsError =
+              insertSchoolError.code === '42501' ||
+              insertSchoolError.code === 'PGRST301' ||
+              (insertSchoolError.message || '').toLowerCase().includes('row-level security') ||
+              (insertSchoolError.message || '').toLowerCase().includes('violates row-level');
+
+            if (isRlsError) {
+              throw new Error(
+                'La migration de securite (013) doit etre appliquee dans Supabase SQL Editor.\n' +
+                'Allez sur : supabase.com/dashboard -> projet nubnovhdpwblhwsamxtb -> SQL Editor\n' +
+                'et executez le fichier supabase/migrations/013_fix_schools_insert_rls.sql'
+              );
+            }
+
+            if (insertSchoolError.code === '23505') {
+              throw new Error('Une ecole avec ce matricule existe deja.');
+            }
+            throw new Error(`Erreur creation ecole : ${insertSchoolError.message}`);
+          }
+
+          schoolResult = insertSchoolData;
+
+          // Ajouter l'utilisateur comme membre directeur
+          await supabase.from('school_members').upsert({
+            school_id: schoolResult.id,
+            user_id: user.id,
+            role: 'directeur',
+            is_active: true,
+          }, { onConflict: 'school_id,user_id' });
         }
 
-        if (isRlsError) {
-          // ── Fallback : Mode local avec sauvegarde pour sync ultérieure ──
-          console.warn('⚠️ RLS bloque la création de l\'école (migration 013 non appliquée). Bascule en mode local...');
-          activateLocalMode();
-          // Sauvegarder les credentials Supabase pour sync future
-          try {
-            localStorage.setItem('ivoireecole_supabase_uid', user.id);
-            localStorage.setItem('ivoireecole_supabase_email', user.email || email);
-            localStorage.setItem('ivoireecole_pending_sync_reason', 'rls_migration_013_missing');
-          } catch { /* ignore */ }
-          console.log('✅ Mode local activé. Données sauvegardées pour sync ultérieure.');
-          await new Promise(r => setTimeout(r, 500));
-          onComplete();
-          return;
+        if (!schoolResult?.id) {
+          throw new Error("Creation de l'ecole echouee : identifiant manquant.");
         }
 
-        // ── Création réussie sur Supabase ──
-        // Profil utilisateur
+        // PROFIL UTILISATEUR
         await supabase.from('user_profiles').upsert({
-          id: user.id, email: user.email,
+          id: user.id,
+          email: user.email,
           first_name: adminProfile.firstName.trim(),
           last_name: adminProfile.lastName.trim(),
           phone: adminProfile.phone.trim(),
           role: 'school_admin',
-          school_id: schoolResult!.id,
-          organization_id: schoolResult!.organization_id || null,
+          school_id: schoolResult.id,
+          organization_id: schoolResult.organization_id || null,
         }, { onConflict: 'id' });
 
-        // Abonnement essai
+        // ABONNEMENT
+        const trialEnd = new Date();
+        trialEnd.setDate(trialEnd.getDate() + 14);
+        const planId = `plan-${selectedPlanId}`;
+        const planName = selectedPlanId === 'essentiel' ? 'Essentiel'
+          : selectedPlanId === 'premium' ? 'Premium' : 'Professionnel';
+
         if (paymentOption === 'trial') {
-          const trialEnd = new Date();
-          trialEnd.setDate(trialEnd.getDate() + 14);
-          const planId = `plan-${selectedPlanId}`;
-          const planName = selectedPlanId === 'essentiel' ? 'Essentiel'
-            : selectedPlanId === 'premium' ? 'Premium' : 'Professionnel';
           await supabase.from('subscriptions').insert({
-            school_id: schoolResult!.id, plan_id: planId, plan_name: planName,
+            school_id: schoolResult.id, plan_id: planId, plan_name: planName,
             status: 'trialing', starts_at: new Date().toISOString(),
             trial_ends_at: trialEnd.toISOString(), expires_at: trialEnd.toISOString(),
           });
+        } else {
+          await supabase.from('subscriptions').insert({
+            school_id: schoolResult.id, plan_id: planId, plan_name: planName,
+            status: 'active', starts_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          });
         }
 
-        console.log('🎉 Activation Supabase réussie !');
+        console.log('Activation Supabase reussie ! Ecole ID:', schoolResult.id);
         await new Promise(r => setTimeout(r, 400));
         onComplete();
         return;
