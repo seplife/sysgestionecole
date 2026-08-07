@@ -147,149 +147,61 @@ export const OnboardingWizardModule: React.FC<OnboardingWizardProps> = ({ onComp
     setCurrentStep(5);
   };
 
-  // Final Activation Handler Step 5
-  // Final Activation Handler Step 5 - VERSION CORRIGÉE
-const handleFinalActivation = async () => {
-  setIsSubmitting(true);
-  setErrorMsg(null);
-
-  try {
-    // ============================================================
-    // 1. VALIDATION DES DONNÉES DU RESPONSABLE
-    // ============================================================
-    const email = adminProfile.email.trim().toLowerCase();
-    const password = adminProfile.password;
-
-    if (!email || !password) {
-      throw new Error('Les informations de connexion du responsable sont obligatoires.');
-    }
-
-    if (!adminProfile.firstName.trim() || !adminProfile.lastName.trim()) {
-      throw new Error('Le prénom et le nom du responsable sont obligatoires.');
-    }
-
-    // ============================================================
-    // 2. VÉRIFICATION DE LA SESSION EXISTANTE
-    // ============================================================
-    console.log('🔍 Vérification session existante...');
-    let { data: { session } } = await supabase.auth.getSession();
-
-    // ============================================================
-    // 3. STRATÉGIE : VÉRIFIER D'ABORD SI LE COMPTE EXISTE
-    // ============================================================
-    if (!session?.user) {
-      console.log('📧 Aucune session. Vérification si le compte existe...');
-      
-      // 🔑 SOLUTION : On essaye de se connecter UNIQUEMENT
-      // Si ça échoue avec "Invalid login credentials", le compte n'existe pas
-      // Si ça réussit, on a la session directement
-      
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+  // ============================================================
+  // UTILITAIRE : Détecter si Supabase est accessible
+  // ============================================================
+  const checkSupabaseReachable = async (): Promise<boolean> => {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000); // 4s timeout
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+      const resp = await fetch(`${supabaseUrl}/rest/v1/`, {
+        method: 'HEAD',
+        signal: controller.signal,
+        headers: { apikey: supabaseKey },
       });
-
-      if (signInError) {
-        console.log('🔍 Analyse de l\'erreur:', signInError.message);
-        
-        // ✅ Si l'erreur indique que les identifiants sont invalides,
-        // cela signifie soit que le compte n'existe pas, soit que le mot de passe est faux
-        if (signInError.message.includes('Invalid login credentials') || 
-            signInError.message.includes('Invalid email or password')) {
-          
-          console.log('🆕 Le compte n\'existe pas. Création en cours...');
-          
-          // ⚠️ AJOUTER UN DÉLAI POUR ÉVITER LE RATE LIMITING
-          // Supabase impose 18 secondes entre les tentatives
-          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 secondes minimum
-          
-          // Créer le compte
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                first_name: adminProfile.firstName.trim(),
-                last_name: adminProfile.lastName.trim(),
-                phone: adminProfile.phone.trim(),
-                role: 'school_admin',
-              },
-            },
-          });
-
-          if (signUpError) {
-            console.error('❌ Erreur création compte:', signUpError);
-            
-            if (signUpError.message.includes('already registered') || 
-                signUpError.message.includes('already exists')) {
-              throw new Error('Ce compte existe déjà. Essayez de vous connecter directement.');
-            }
-            
-            if (signUpError.message.includes('after 18 seconds')) {
-              throw new Error('Veuillez patienter quelques secondes avant de réessayer (limite de sécurité).');
-            }
-            
-            throw new Error(`Erreur création compte : ${signUpError.message}`);
-          }
-
-          console.log('✅ Compte créé avec succès');
-          
-          // Vérifier si la session est directement disponible
-          if (signUpData.session?.user) {
-            session = signUpData.session;
-            console.log('✅ Session disponible immédiatement (confirmation email désactivée)');
-          } else {
-            // ✅ La session n'est pas disponible : confirmation email requise par Supabase
-            // Il ne faut PAS tenter signInWithPassword ici, car cela échouerait avec
-            // "Email not confirmed". L'utilisateur doit d'abord cliquer sur le lien
-            // de confirmation dans sa boîte mail.
-            console.log('📧 Email de confirmation envoyé. L\'utilisateur doit confirmer son adresse.');
-            setIsSubmitting(false);
-            setErrorMsg(
-              '✅ Compte créé avec succès ! Un e-mail de confirmation a été envoyé à ' +
-              email +
-              '. Veuillez cliquer sur le lien dans votre boîte mail avant de vous connecter.'
-            );
-            // On arrête ici — l'utilisateur doit confirmer son email d'abord
-            return;
-          }
-        } else {
-          // Autre erreur inattendue
-          console.error('❌ Erreur inattendue:', signInError);
-          throw new Error(`Erreur d'authentification : ${signInError.message}`);
-        }
-      } else {
-        // Connexion réussie du premier coup
-        session = signInData.session;
-        console.log('✅ Connexion réussie (compte existant)');
-      }
+      clearTimeout(timeout);
+      return resp.ok || resp.status === 401 || resp.status === 400;
+    } catch {
+      return false;
     }
+  };
 
-    // ============================================================
-    // 4. VÉRIFICATION FINALE DE LA SESSION
-    // ============================================================
-    if (!session?.user) {
-      throw new Error('Impossible d\'établir une session. Veuillez réessayer dans quelques secondes.');
-    }
+  // ============================================================
+  // MODE LOCAL : Activation hors-ligne via localStorage
+  // ============================================================
+  const activateLocalMode = () => {
+    console.log('🔌 [Mode Local] Activation hors-ligne en cours...');
 
-    const user = session.user;
-    console.log('👤 Utilisateur authentifié:', user.id, user.email);
+    const localId = `local-${Date.now()}`;
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 14);
 
-    // ============================================================
-    // 5. CONSTRUCTION DU PAYLOAD DE L'ÉCOLE
-    // ============================================================
-    const newSchoolPayload = {
+    const planName = selectedPlanId === 'essentiel' ? 'Essentiel'
+      : selectedPlanId === 'premium' ? 'Premium' : 'Professionnel';
+
+    // ── Profil utilisateur local ───────────────────────────
+    const localUser = {
+      id: localId,
+      email: adminProfile.email.trim().toLowerCase(),
+      first_name: adminProfile.firstName.trim(),
+      last_name: adminProfile.lastName.trim(),
+      phone: adminProfile.phone.trim(),
+      role: 'school_admin' as const,
+      school_id: `school-${localId}`,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      _localMode: true,
+      _pendingSync: true,
+    };
+
+    // ── École locale ───────────────────────────────────────
+    const localSchool = {
+      id: `school-${localId}`,
+      organization_id: '',
       name: schoolData.name.trim(),
-      slug:
-        schoolData.name
-          .trim()
-          .toLowerCase()
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '') +
-        '-' +
-        Date.now().toString().slice(-4),
+      slug: schoolData.name.trim().toLowerCase().replace(/\s+/g, '-') + '-' + localId.slice(-4),
       registration_number: schoolData.registrationNumber.trim(),
       school_type: schoolData.schoolType,
       address: schoolData.address.trim() || `${schoolData.city.trim()}, Côte d'Ivoire`,
@@ -298,122 +210,233 @@ const handleFinalActivation = async () => {
       whatsapp: schoolData.whatsapp.trim(),
       email: schoolData.email.trim().toLowerCase(),
       logo_url: schoolData.logoUrl,
-      director_name:
-        schoolData.directorName.trim() ||
-        `${adminProfile.lastName.trim()} ${adminProfile.firstName.trim()}`,
-      status: paymentOption === 'trial' ? 'active' : 'pending',
-      country: 'Côte d\'Ivoire',
+      director_name: schoolData.directorName.trim() || `${adminProfile.lastName.trim()} ${adminProfile.firstName.trim()}`,
+      status: 'active',
+      country: "Côte d'Ivoire",
+      created_at: new Date().toISOString(),
+      _localMode: true,
+      _pendingSync: true,
     };
 
-    console.log('📦 Payload école:', newSchoolPayload);
+    // ── Abonnement local ───────────────────────────────────
+    const localSubscription = {
+      id: `sub-${localId}`,
+      school_id: localSchool.id,
+      plan_id: `plan-${selectedPlanId}`,
+      plan_name: planName,
+      status: paymentOption === 'trial' ? 'trialing' : 'active',
+      starts_at: new Date().toISOString(),
+      trial_ends_at: trialEndDate.toISOString(),
+      expires_at: trialEndDate.toISOString(),
+      _localMode: true,
+      _pendingSync: true,
+    };
 
-    // ============================================================
-    // 6. CRÉATION DE L'ÉCOLE DIRECTEMENT DANS SUPABASE
-    // ============================================================
-    console.log('🏫 Création de l\'école...');
-    
-    const { data: schoolResult, error: schoolError } = await supabase
-      .from('schools')
-      .insert(newSchoolPayload)
-      .select()
-      .single();
+    // ── Persistance localStorage ───────────────────────────
+    try {
+      localStorage.setItem('ivoireecole_local_user', JSON.stringify(localUser));
+      localStorage.setItem('ivoireecole_local_school', JSON.stringify(localSchool));
+      localStorage.setItem('ivoireecole_local_subscription', JSON.stringify(localSubscription));
+      localStorage.setItem('ivoireecole_local_password_hash', btoa(adminProfile.password)); // base64 simple (non sécurisé, juste pour démo locale)
+      localStorage.setItem('sysgestionecole_ui_current_school_id', localSchool.id);
+      localStorage.setItem('ivoireecole_onboarding_complete', 'true');
+      localStorage.setItem('ivoireecole_activation_mode', 'local');
+      localStorage.setItem('ivoireecole_activation_date', new Date().toISOString());
+      console.log('✅ [Mode Local] Données persistées dans localStorage');
+    } catch (storageErr) {
+      console.error('[Mode Local] Erreur localStorage:', storageErr);
+    }
 
-    if (schoolError) {
-      console.error('❌ Erreur création école:', schoolError);
-      
-      if (schoolError.code === '23505') {
-        throw new Error('Une école avec ce matricule existe déjà.');
+    return { localUser, localSchool, localSubscription };
+  };
+
+  // ============================================================
+  // HANDLER PRINCIPAL : ACTIVATION (Supabase + Fallback Local)
+  // ============================================================
+  const handleFinalActivation = async () => {
+    setIsSubmitting(true);
+    setErrorMsg(null);
+
+    try {
+      // ── 1. VALIDATION ─────────────────────────────────────
+      const email = adminProfile.email.trim().toLowerCase();
+      const password = adminProfile.password;
+
+      if (!email || !password) {
+        throw new Error('Les informations de connexion du responsable sont obligatoires.');
       }
-      
-      throw new Error(`Erreur création école : ${schoolError.message}`);
-    }
+      if (!adminProfile.firstName.trim() || !adminProfile.lastName.trim()) {
+        throw new Error('Le prénom et le nom du responsable sont obligatoires.');
+      }
+      if (!schoolData.name.trim() || !schoolData.registrationNumber.trim()) {
+        throw new Error("Le nom et le matricule de l'établissement sont obligatoires.");
+      }
 
-    console.log('✅ École créée:', schoolResult.id);
+      // ── 2. TEST DE CONNECTIVITÉ SUPABASE ──────────────────
+      console.log('🌐 Test de connectivité Supabase...');
+      const supabaseOk = await checkSupabaseReachable();
 
-    // ============================================================
-    // 7. ASSOCIER L'UTILISATEUR À L'ÉCOLE
-    // ============================================================
-    console.log('👤 Association utilisateur-école...');
-    
-    const { error: profileError } = await supabase
-      .from('user_profiles')
-      .upsert({
-        id: user.id,
-        email: user.email,
-        first_name: adminProfile.firstName.trim(),
-        last_name: adminProfile.lastName.trim(),
-        phone: adminProfile.phone.trim(),
-        role: 'school_admin',
-        school_id: schoolResult.id,
-        organization_id: schoolResult.organization_id || null,
-      }, {
-        onConflict: 'id'
-      });
+      // ── 3A. SUPABASE ACCESSIBLE → FLUX NORMAL ─────────────
+      if (supabaseOk) {
+        console.log('✅ Supabase accessible. Flux authentification normal.');
 
-    if (profileError) {
-      console.warn('⚠️ École créée mais profil non mis à jour:', profileError);
-    } else {
-      console.log('✅ Profil utilisateur mis à jour');
-    }
+        let session = (await supabase.auth.getSession()).data.session;
 
-    // ============================================================
-    // 8. CRÉER UN ABONNEMENT D'ESSAI SI NÉCESSAIRE
-    // ============================================================
-    if (paymentOption === 'trial') {
-      console.log('🎁 Création abonnement essai 14 jours...');
-      
-      const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + 14);
-      
-      const planId = selectedPlanId === 'essentiel' ? 'plan-essentiel' : 
-                     selectedPlanId === 'premium' ? 'plan-premium' : 'plan-professionnel';
-      const planName = selectedPlanId === 'essentiel' ? 'Essentiel' :
-                       selectedPlanId === 'premium' ? 'Premium' : 'Professionnel';
-      
-      const { error: subError } = await supabase
-        .from('subscriptions')
-        .insert({
+        if (!session?.user) {
+          // Tenter connexion
+          const { data: signInData, error: signInError } =
+            await supabase.auth.signInWithPassword({ email, password });
+
+          if (signInError) {
+            const isInvalidCreds =
+              signInError.message.includes('Invalid login credentials') ||
+              signInError.message.includes('Invalid email or password');
+
+            if (isInvalidCreds) {
+              // Compte inexistant → créer
+              console.log('🆕 Création du compte Supabase...');
+              await new Promise(r => setTimeout(r, 1500));
+
+              const { data: signUpData, error: signUpError } =
+                await supabase.auth.signUp({
+                  email,
+                  password,
+                  options: {
+                    data: {
+                      first_name: adminProfile.firstName.trim(),
+                      last_name: adminProfile.lastName.trim(),
+                      phone: adminProfile.phone.trim(),
+                      role: 'school_admin',
+                    },
+                  },
+                });
+
+              if (signUpError) {
+                if (signUpError.message.includes('already registered') || signUpError.message.includes('already exists')) {
+                  throw new Error('Ce compte existe déjà. Essayez de vous connecter directement.');
+                }
+                if (signUpError.message.includes('after 18 seconds')) {
+                  throw new Error('Limite de sécurité atteinte. Patientez 20 secondes puis réessayez.');
+                }
+                throw new Error(`Erreur création compte : ${signUpError.message}`);
+              }
+
+              if (signUpData.session?.user) {
+                session = signUpData.session;
+              } else {
+                // Email de confirmation requis
+                setIsSubmitting(false);
+                setErrorMsg(
+                  `✅ Compte créé ! Un e-mail de confirmation a été envoyé à ${email}. Confirmez votre adresse puis revenez vous connecter.`
+                );
+                return;
+              }
+            } else {
+              throw new Error(`Erreur d'authentification : ${signInError.message}`);
+            }
+          } else {
+            session = signInData.session;
+          }
+        }
+
+        if (!session?.user) {
+          throw new Error("Impossible d'établir une session. Veuillez réessayer.");
+        }
+
+        const user = session.user;
+
+        // Payload école
+        const slug =
+          schoolData.name.trim().toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') +
+          '-' + Date.now().toString().slice(-4);
+
+        const { data: schoolResult, error: schoolError } = await supabase
+          .from('schools')
+          .insert({
+            name: schoolData.name.trim(), slug,
+            registration_number: schoolData.registrationNumber.trim(),
+            school_type: schoolData.schoolType,
+            address: schoolData.address.trim() || `${schoolData.city.trim()}, Côte d'Ivoire`,
+            city: schoolData.city.trim(),
+            phone: schoolData.phone.trim(), whatsapp: schoolData.whatsapp.trim(),
+            email: schoolData.email.trim().toLowerCase(),
+            logo_url: schoolData.logoUrl,
+            director_name: schoolData.directorName.trim() || `${adminProfile.lastName.trim()} ${adminProfile.firstName.trim()}`,
+            status: paymentOption === 'trial' ? 'active' : 'pending',
+            country: "Côte d'Ivoire",
+          })
+          .select().single();
+
+        if (schoolError) {
+          if (schoolError.code === '23505') throw new Error('Une école avec ce matricule existe déjà.');
+          throw new Error(`Erreur création école : ${schoolError.message}`);
+        }
+
+        // Profil utilisateur
+        await supabase.from('user_profiles').upsert({
+          id: user.id, email: user.email,
+          first_name: adminProfile.firstName.trim(),
+          last_name: adminProfile.lastName.trim(),
+          phone: adminProfile.phone.trim(),
+          role: 'school_admin',
           school_id: schoolResult.id,
-          plan_id: planId,
-          plan_name: planName,
-          status: 'trialing',
-          starts_at: new Date().toISOString(),
-          trial_ends_at: trialEndDate.toISOString(),
-          expires_at: trialEndDate.toISOString(),
-        });
+          organization_id: schoolResult.organization_id || null,
+        }, { onConflict: 'id' });
 
-      if (subError) {
-        console.warn('⚠️ Abonnement non créé:', subError);
-      } else {
-        console.log('✅ Abonnement essai créé');
+        // Abonnement essai
+        if (paymentOption === 'trial') {
+          const trialEnd = new Date();
+          trialEnd.setDate(trialEnd.getDate() + 14);
+          const planId = `plan-${selectedPlanId}`;
+          const planName = selectedPlanId === 'essentiel' ? 'Essentiel'
+            : selectedPlanId === 'premium' ? 'Premium' : 'Professionnel';
+          await supabase.from('subscriptions').insert({
+            school_id: schoolResult.id, plan_id: planId, plan_name: planName,
+            status: 'trialing', starts_at: new Date().toISOString(),
+            trial_ends_at: trialEnd.toISOString(), expires_at: trialEnd.toISOString(),
+          });
+        }
+
+        console.log('🎉 Activation Supabase réussie !');
+        await new Promise(r => setTimeout(r, 400));
+        onComplete();
+        return;
       }
-    }
 
-    // ============================================================
-    // 9. SUCCÈS !
-    // ============================================================
-    console.log('🎉 Activation terminée avec succès !');
-    
-    // Attendre un peu pour que tout soit bien synchronisé
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    onComplete();
-    
-  } catch (err: any) {
-    console.error('❌ [Onboarding] Erreur:', err);
-    
-    // Personnaliser le message selon l'erreur
-    let message = err?.message || 'Une erreur est survenue lors de l\'activation.';
-    
-    if (message.includes('after 18 seconds')) {
-      message = 'Pour des raisons de sécurité, veuillez patienter 20 secondes avant de réessayer.';
+      // ── 3B. SUPABASE INACCESSIBLE → MODE LOCAL ────────────
+      console.warn('⚠️ Supabase inaccessible. Basculement en mode local...');
+      activateLocalMode();
+
+      console.log('🎉 Activation locale réussie ! Redirection dashboard...');
+      await new Promise(r => setTimeout(r, 600));
+      onComplete();
+
+    } catch (err: any) {
+      console.error('❌ [Onboarding] Erreur:', err);
+      let message = err?.message || "Une erreur est survenue lors de l'activation.";
+      if (message.includes('after 18 seconds')) {
+        message = 'Limite de sécurité. Patientez 20 secondes et réessayez.';
+      }
+      if (message.toLowerCase().includes('network') || message.toLowerCase().includes('fetch')) {
+        message = '🌐 Connexion impossible au serveur. Votre activation a été sauvegardée localement. Cliquez à nouveau pour accéder au dashboard.';
+        // Tenter l'activation locale malgré tout
+        try {
+          activateLocalMode();
+          await new Promise(r => setTimeout(r, 600));
+          setIsSubmitting(false);
+          onComplete();
+          return;
+        } catch (localErr) {
+          console.error('Erreur mode local:', localErr);
+        }
+      }
+      setErrorMsg(message);
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setErrorMsg(message);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 md:p-8 font-sans relative overflow-hidden">

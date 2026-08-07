@@ -169,6 +169,25 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     } catch (e: any) {
       console.error('[TenantContext] loadSchools error:', e);
+
+      // ── Fallback mode local : lire l'école depuis localStorage ──
+      try {
+        const rawLocalSchool = localStorage.getItem('ivoireecole_local_school');
+        if (rawLocalSchool) {
+          const localSchool = JSON.parse(rawLocalSchool) as School;
+          if (localSchool?.id && (localSchool as any)._localMode) {
+            console.info('[TenantContext] 🔌 École locale chargée (mode hors-ligne)');
+            setSchools([localSchool]);
+            setCurrentSchoolState(localSchool);
+            saveCurrentSchoolId(localSchool.id);
+            setSchoolsError(null);
+            return;
+          }
+        }
+      } catch (localErr) {
+        console.warn('[TenantContext] Erreur lecture école locale:', localErr);
+      }
+
       setSchoolsError(
         isSuperAdmin
           ? 'Impossible de charger les écoles. Vérifiez la connexion Supabase.'

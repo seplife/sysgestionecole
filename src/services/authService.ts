@@ -1,10 +1,47 @@
 // ============================================================
 // SERVICE D'AUTHENTIFICATION CENTRALISÉ — IVOIREÉCOLE+
 // Source de vérité : Supabase Auth + user_profiles + school_members
+// Fallback : Mode local (localStorage) si Supabase inaccessible
 // ============================================================
 
 import { supabase } from '../lib/supabase';
 import { UserProfile, UserRole } from '../types/database';
+
+// ─────────────────────────────────────────────────────────────
+// LECTURE DU MODE LOCAL (localStorage)
+// ─────────────────────────────────────────────────────────────
+function getLocalSession(): AuthSession | null {
+  try {
+    const rawUser = localStorage.getItem('ivoireecole_local_user');
+    if (!rawUser) return null;
+    const localUser = JSON.parse(rawUser);
+    if (!localUser?._localMode) return null;
+
+    const profile: UserProfile = {
+      id: localUser.id,
+      email: localUser.email,
+      first_name: localUser.first_name,
+      last_name: localUser.last_name,
+      phone: localUser.phone,
+      role: localUser.role as UserRole,
+      school_id: localUser.school_id,
+      is_active: true,
+      created_at: localUser.created_at,
+    };
+
+    return {
+      userId: localUser.id,
+      email: localUser.email,
+      profile,
+      memberships: [{ school_id: localUser.school_id, role: localUser.role as UserRole, is_active: true }],
+      isSuperAdmin: false,
+      primarySchoolId: localUser.school_id,
+      primaryRole: localUser.role as UserRole,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export interface SchoolMembership {
   school_id: string;
@@ -42,6 +79,23 @@ export async function loginWithSupabase(
     });
 
     if (error) {
+      // Erreur réseau → essayer le mode local
+      const isNetworkError = error.message.toLowerCase().includes('network') ||
+        error.message.toLowerCase().includes('fetch') ||
+        error.message.toLowerCase().includes('failed to fetch');
+
+      if (isNetworkError) {
+        const localSession = getLocalSession();
+        if (localSession && localSession.email === email.trim().toLowerCase()) {
+          const hash = localStorage.getItem('ivoireecole_local_password_hash');
+          if (hash && atob(hash) === password) {
+            console.info('[AuthService] 🔌 Connexion locale réussie (mode hors-ligne)');
+            return { success: true, session: localSession };
+          }
+        }
+        return { success: false, message: 'Connexion impossible : serveur inaccessible et identifiants locaux incorrects.' };
+      }
+
       console.error('[AuthService] Login error:', error);
       return {
         success: false,
@@ -57,9 +111,20 @@ export async function loginWithSupabase(
     return { success: true, session };
   } catch (e: any) {
     console.error('[AuthService] Unexpected login error:', e);
+    // Tenter mode local en dernier recours
+    const localSession = getLocalSession();
+    if (localSession && localSession.email === email.trim().toLowerCase()) {
+      try {
+        const hash = localStorage.getItem('ivoireecole_local_password_hash');
+        if (hash && atob(hash) === password) {
+          console.info('[AuthService] 🔌 Connexion locale (mode hors-ligne, exception réseau)');
+          return { success: true, session: localSession };
+        }
+      } catch { /* ignore */ }
+    }
     return {
       success: false,
-      message: 'Erreur de connexion à Supabase. Vérifiez votre connexion réseau.',
+      message: 'Erreur de connexion. Vérifiez votre connexion réseau.',
     };
   }
 }
@@ -76,16 +141,29 @@ export async function logoutFromSupabase(): Promise<void> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// SESSION COURANTE
+// SESSION COURANTE (avec fallback mode local)
 // ─────────────────────────────────────────────────────────────
 export async function getCurrentSession(): Promise<AuthSession | null> {
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
-    if (error || !session?.user) return null;
-
-    return await buildAuthSession(session.user.id, session.user.email || '');
+    if (!error && session?.user) {
+      return await buildAuthSession(session.user.id, session.user.email || '');
+    }
+    // Supabase indisponible ou pas de session → vérifier mode local
+    const localSession = getLocalSession();
+    if (localSession) {
+      console.info('[AuthService] 🔌 Session locale chargée (mode hors-ligne)');
+      return localSession;
+    }
+    return null;
   } catch (e) {
     console.error('[AuthService] getSession error:', e);
+    // Dernier recours : mode local
+    const localSession = getLocalSession();
+    if (localSession) {
+      console.info('[AuthService] 🔌 Fallback session locale après erreur réseau');
+      return localSession;
+    }
     return null;
   }
 }
