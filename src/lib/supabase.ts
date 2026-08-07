@@ -45,7 +45,8 @@ export const isSupabaseConfigured = (): boolean => {
     SUPABASE_URL.startsWith('https://') &&
     SUPABASE_URL.includes('.supabase.co') &&
     SUPABASE_ANON_KEY &&
-    SUPABASE_ANON_KEY.startsWith('eyJ')
+    // Accepte les deux formats : JWT (eyJ...) et nouveau format publishable (sb_publishable_...)
+    (SUPABASE_ANON_KEY.startsWith('eyJ') || SUPABASE_ANON_KEY.startsWith('sb_'))
   );
 };
 
